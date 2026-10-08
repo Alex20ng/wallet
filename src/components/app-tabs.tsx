@@ -1,32 +1,37 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import { darkColors, lightColors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 
-import { Colors } from '@/constants/theme';
+const TABS = [
+  {
+    name: "index",
+    title: "Accueil",
+    sf: "square.grid.2x2.fill",
+    md: "dashboard",
+  },
+  {
+    name: "transactions",
+    title: "Transactions",
+    sf: "list.bullet.rectangle.fill",
+    md: "receipt_long",
+  },
+  { name: "categories", title: "Catégories", sf: "tag.fill", md: "sell" },
+  { name: "budgets", title: "Budgets", sf: "chart.pie.fill", md: "savings" },
+  { name: "settings", title: "Réglages", sf: "gearshape.fill", md: "settings" },
+] as const;
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colorScheme = useColorScheme();
+  const colors = colorScheme === "dark" ? darkColors : lightColors;
 
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
+    <NativeTabs tintColor={colors.primary}>
+      {TABS.map((tab) => (
+        <NativeTabs.Trigger key={tab.name} name={tab.name}>
+          <NativeTabs.Trigger.Icon sf={tab.sf} md={tab.md} />
+          <NativeTabs.Trigger.Label>{tab.title}</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+      ))}
     </NativeTabs>
   );
 }
