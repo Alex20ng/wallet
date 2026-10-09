@@ -292,7 +292,7 @@ export default function BudgetsScreen() {
               {formatCurrency(totalBudgeted)}
             </ThemedText>
           </View>
-          s
+
           <View
             style={[styles.summaryDivider, { backgroundColor: colors.border }]}
           />

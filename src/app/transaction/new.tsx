@@ -6,6 +6,7 @@ import { haptics } from '@/hooks/use-haptics';
 import { ThemedView, ThemedText, Button, Input, Select, NumberInput } from '@/components/ui';
 import { Screen, PageHeader } from '@/components/layout';
 import { useAppStore } from '@/store/useAppStore';
+import { useBudgetAlerts } from '@/hooks/alerts/useBudgetAlerts';
 import { transactionRepository } from '@/repositories';
 import { type TransactionType } from '@/services/currency';
 import { spacing, borderRadius, shadows } from '@/constants/theme';
@@ -78,6 +79,23 @@ export default function TransactionFormScreen() {
         await updateTransaction(id, { amount, type, categoryId: activeCategoryId, date: date.getTime(), note: note || null });
       } else {
         await addTransaction({ amount, type, categoryId: activeCategoryId, date: date.getTime(), note: note || null });
+        try {
+          const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+          const end = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
+          const cat = categories.find((c) => c.id === activeCategoryId);
+          const bgs = (useAppStore() as any).budgets || [];
+          const budget = bgs.find((b: any) => b.categoryId === activeCategoryId && b.periodStart === start);
+          if (budget && type === 'expense') {
+            await (useBudgetAlerts() as any).checkBudget({
+              categoryId: budget.categoryId,
+              categoryName: cat?.name,
+              budget: budget.amount,
+              spent: 0,
+              periodStart: start,
+              periodEnd: end,
+            });
+          }
+        } catch {}
       }
       await haptics.notification(haptics.NotificationFeedbackType.Success);
       router.back();

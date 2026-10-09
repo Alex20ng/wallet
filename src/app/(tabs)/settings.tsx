@@ -6,21 +6,22 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { CURRENCY_CODE, CURRENCY_LOCALE } from "@/services/currency";
+import { NotificationService } from "@/services/notifications/NotificationService";
+import { notificationPreferences } from "@/storage/notificationPreferences";
+import { router } from "expo-router";
 import type { LucideIcon } from "lucide-react-native";
 import {
   Bell,
   CalendarDays,
   FileSignature,
-  FileText,
   Info,
-  Lock,
   Moon,
   Palette,
   Shield,
   Wallet,
 } from "lucide-react-native";
-import { useState } from "react";
-import { Alert, Linking, Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 
 type SettingItem = {
   key: string;
@@ -44,59 +45,36 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  const [bioEnabled, setBioEnabled] = useState(false);
-  const [autoLock, setAutoLock] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [monthlyReport, setMonthlyReport] = useState(false);
+  const [budgetAlertsEnabled, setBudgetAlertsEnabled] = useState(true);
+  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(false);
+  const [warningThreshold, setWarningThreshold] = useState(80);
+  const [dailyReminderHour, setDailyReminderHour] = useState(20);
+  const [dailyReminderMinute, setDailyReminderMinute] = useState(0);
 
-  const handleExport = async () => {
-    await haptics.impact(haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      "Export CSV",
-      "Fonctionnalité à implémenter avec le composant d'export",
-    );
-  };
+  useEffect(() => {
+    (async () => {
+      const p = await notificationPreferences.getPreferences();
+      const granted = await NotificationService.hasPermission();
 
-  const handleExportJSON = async () => {
-    await haptics.impact(haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      "Export JSON",
-      "Fonctionnalité à implémenter avec le composant d'export",
-    );
-  };
+      // L'interrupteur reflète la réalité : si l'utilisateur a retiré la
+      // permission dans les réglages du téléphone, il repasse à « désactivé »
+      setNotificationsEnabled(p.notificationsEnabled && granted);
+      setBudgetAlertsEnabled(p.budgetAlertsEnabled);
+      setDailyReminderEnabled(p.dailyReminderEnabled && granted);
+      setWarningThreshold(p.warningThreshold);
+      setDailyReminderHour(p.dailyReminderHour);
+      setDailyReminderMinute(p.dailyReminderMinute);
 
-  const handleClearAll = () => {
-    Alert.alert(
-      "Effacer toutes les données",
-      "Cette action est IRRÉVERSIBLE. Toutes vos transactions, catégories et budgets seront supprimés définitivement.",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Effacer tout",
-          style: "destructive",
-          onPress: async () => {
-            await haptics.impact(haptics.ImpactFeedbackStyle.Heavy);
-            Alert.alert(
-              "Confirmation finale",
-              "Êtes-vous absolument certain ?",
-              [
-                { text: "Non", style: "cancel" },
-                {
-                  text: "OUI, TOUT EFFACER",
-                  style: "destructive",
-                  onPress: async () => {
-                    await haptics.notification(
-                      haptics.NotificationFeedbackType.Success,
-                    );
-                  },
-                },
-              ],
-            );
-          },
-        },
-      ],
-    );
-  };
+      // Remet le rappel en place si besoin (pas de doublon : même identifiant)
+      if (granted && p.notificationsEnabled && p.dailyReminderEnabled) {
+        await NotificationService.scheduleDailyReminder(
+          p.dailyReminderHour,
+          p.dailyReminderMinute,
+        );
+      }
+    })();
+  }, []);
 
   const settingsSections: SettingSection[] = [
     {
@@ -126,62 +104,68 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: "Sécurité",
-      icon: Lock,
-      items: [
-        {
-          key: "bio",
-          icon: Shield,
-          label: "Authentification biométrique",
-          description: "Face ID / Touch ID / empreinte",
-          type: "switch",
-          value: bioEnabled,
-          onToggle: async (value: boolean) => {
-            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
-            setBioEnabled(value);
-          },
-        },
-        {
-          key: "autolock",
-          icon: Lock,
-          label: "Verrouillage automatique",
-          description: "Après 1 minute en arrière-plan",
-          type: "switch",
-          value: autoLock,
-          onToggle: async (value: boolean) => {
-            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
-            setAutoLock(value);
-          },
-        },
-      ],
-    },
-    {
       title: "Notifications",
       icon: Bell,
       items: [
         {
-          key: "budget-alerts",
-          icon: CalendarDays,
-          label: "Rappels de budget",
-          description: "Alertes quand vous approchez de la limite",
+          key: "notifications-enabled",
+          icon: Bell,
+          label: "Activer les notifications",
+          description: "Autoriser les notifications locales",
           type: "switch",
           value: notificationsEnabled,
           onToggle: async (value: boolean) => {
             await haptics.impact(haptics.ImpactFeedbackStyle.Light);
             setNotificationsEnabled(value);
+            await notificationPreferences.setNotificationsEnabled(value);
+            if (value) {
+              try {
+                await NotificationService.requestPermissions();
+              } catch {}
+            }
           },
         },
         {
-          key: "monthly-report",
-          icon: FileText,
-          label: "Rapport mensuel",
-          description: "Recevoir un résumé chaque mois",
+          key: "budget-alerts",
+          icon: CalendarDays,
+          label: "Alertes de dépassement de budget",
+          description: "Avertissements et alertes selon vos seuils",
           type: "switch",
-          value: monthlyReport,
+          value: budgetAlertsEnabled,
           onToggle: async (value: boolean) => {
             await haptics.impact(haptics.ImpactFeedbackStyle.Light);
-            setMonthlyReport(value);
+            setBudgetAlertsEnabled(value);
+            await notificationPreferences.setBudgetAlertsEnabled(value);
           },
+        },
+        {
+          key: "daily-reminder",
+          icon: CalendarDays,
+          label: "Rappel quotidien de saisie",
+          description: `Tous les jours à ${String(dailyReminderHour).padStart(2, "0")}:${String(dailyReminderMinute).padStart(2, "0")}`,
+          type: "switch",
+          value: dailyReminderEnabled,
+          onToggle: async (value: boolean) => {
+            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
+            setDailyReminderEnabled(value);
+            await notificationPreferences.setDailyReminderEnabled(value);
+            if (value) {
+              await NotificationService.scheduleDailyReminder(
+                dailyReminderHour,
+                dailyReminderMinute,
+              );
+            } else {
+              await NotificationService.cancelDailyReminders();
+            }
+          },
+        },
+        {
+          key: "warning-threshold",
+          icon: Info,
+          label: "Seuil d'alerte préventive",
+          description: `Alerte à ${warningThreshold}% du budget`,
+          type: "value",
+          value: `${warningThreshold}%`,
         },
       ],
     },
@@ -201,9 +185,9 @@ export default function SettingsScreen() {
           key: "terms",
           icon: FileSignature,
           label: "Conditions d'utilisation",
-          description: "Lire les conditions",
+          description: "Lire nos conditions d'utilisation",
           type: "action",
-          onPress: () => Linking.openURL("https://example.com/terms"),
+          onPress: () => router.push("/legal/terms"),
         },
         {
           key: "privacy",
@@ -211,7 +195,7 @@ export default function SettingsScreen() {
           label: "Politique de confidentialité",
           description: "Vos données restent sur votre appareil",
           type: "action",
-          onPress: () => Linking.openURL("https://example.com/privacy"),
+          onPress: () => router.push("/legal/privacy"),
         },
       ],
     },
@@ -221,13 +205,6 @@ export default function SettingsScreen() {
     <Screen>
       <View style={styles.pageHeader}>
         <View style={styles.pageHeaderText}>
-          <ThemedText
-            variant="caption"
-            color="tertiary"
-            style={styles.pageDate}
-          >
-            Version 1.0.0
-          </ThemedText>
           <ThemedText variant="headline" weight="bold">
             Paramètres
           </ThemedText>

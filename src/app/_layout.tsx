@@ -2,6 +2,7 @@ import { Providers } from "@/components/providers";
 import { runMigrations } from "@/database/connection";
 import { loadThemePreference } from "@/hooks/theme-preference";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import NotificationService from "@/services/notifications/NotificationService";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -11,6 +12,7 @@ import "../global.css";
 
 // Hide splash screen after initialization
 SplashScreen.preventAutoHideAsync();
+NotificationService.configure();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -52,7 +54,10 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="transaction/new" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="transaction/new"
+              options={{ headerShown: false }}
+            />
             <Stack.Screen
               name="transaction/[id]"
               options={{ headerShown: false }}
