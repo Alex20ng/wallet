@@ -21,7 +21,7 @@ import {
   Wallet,
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 type SettingItem = {
   key: string;
@@ -55,7 +55,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       const p = await notificationPreferences.getPreferences();
-      const granted = await NotificationService.hasPermission();
+      const granted = await NotificationService.checkPermissions();
 
       // L'interrupteur reflète la réalité : si l'utilisateur a retiré la
       // permission dans les réglages du téléphone, il repasse à « désactivé »
@@ -157,6 +157,287 @@ export default function SettingsScreen() {
             } else {
               await NotificationService.cancelDailyReminders();
             }
+          },
+        },
+        {
+          key: "daily-reminder-time",
+          icon: CalendarDays,
+          label: "Heure du rappel quotidien",
+          description: `Actuellement : ${String(dailyReminderHour).padStart(2, "0")}:${String(dailyReminderMinute).padStart(2, "0")}`,
+          type: "action",
+          onPress: async () => {
+            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
+            Alert.alert(
+              "Heure du rappel",
+              "Choisissez l'heure à laquelle vous souhaitez recevoir le rappel (approx).",
+              [
+                { text: "Annuler", style: "cancel" },
+                {
+                  text: "00:00",
+                  onPress: async () => {
+                    setDailyReminderHour(0);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(0, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(0, 0);
+                    }
+                  },
+                },
+                {
+                  text: "01:00",
+                  onPress: async () => {
+                    setDailyReminderHour(1);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(1, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(1, 0);
+                    }
+                  },
+                },
+                {
+                  text: "02:00",
+                  onPress: async () => {
+                    setDailyReminderHour(2);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(2, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(2, 0);
+                    }
+                  },
+                },
+                {
+                  text: "03:00",
+                  onPress: async () => {
+                    setDailyReminderHour(3);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(3, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(3, 0);
+                    }
+                  },
+                },
+                {
+                  text: "04:00",
+                  onPress: async () => {
+                    setDailyReminderHour(4);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(4, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(4, 0);
+                    }
+                  },
+                },
+                {
+                  text: "05:00",
+                  onPress: async () => {
+                    setDailyReminderHour(5);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(5, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(5, 0);
+                    }
+                  },
+                },
+                {
+                  text: "06:00",
+                  onPress: async () => {
+                    setDailyReminderHour(6);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(6, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(6, 0);
+                    }
+                  },
+                },
+                {
+                  text: "07:00",
+                  onPress: async () => {
+                    setDailyReminderHour(7);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(7, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(7, 0);
+                    }
+                  },
+                },
+                {
+                  text: "08:00",
+                  onPress: async () => {
+                    setDailyReminderHour(8);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(8, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(8, 0);
+                    }
+                  },
+                },
+                {
+                  text: "09:00",
+                  onPress: async () => {
+                    setDailyReminderHour(9);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(9, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(9, 0);
+                    }
+                  },
+                },
+                {
+                  text: "10:00",
+                  onPress: async () => {
+                    setDailyReminderHour(10);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(10, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(10, 0);
+                    }
+                  },
+                },
+                {
+                  text: "11:00",
+                  onPress: async () => {
+                    setDailyReminderHour(11);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(11, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(11, 0);
+                    }
+                  },
+                },
+                {
+                  text: "12:00",
+                  onPress: async () => {
+                    setDailyReminderHour(12);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(12, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(12, 0);
+                    }
+                  },
+                },
+                {
+                  text: "13:00",
+                  onPress: async () => {
+                    setDailyReminderHour(13);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(13, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(13, 0);
+                    }
+                  },
+                },
+                {
+                  text: "14:00",
+                  onPress: async () => {
+                    setDailyReminderHour(14);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(14, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(14, 0);
+                    }
+                  },
+                },
+                {
+                  text: "15:00",
+                  onPress: async () => {
+                    setDailyReminderHour(15);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(15, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(15, 0);
+                    }
+                  },
+                },
+                {
+                  text: "16:00",
+                  onPress: async () => {
+                    setDailyReminderHour(16);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(16, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(16, 0);
+                    }
+                  },
+                },
+                {
+                  text: "17:00",
+                  onPress: async () => {
+                    setDailyReminderHour(17);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(17, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(17, 0);
+                    }
+                  },
+                },
+                {
+                  text: "18:00",
+                  onPress: async () => {
+                    setDailyReminderHour(18);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(18, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(18, 0);
+                    }
+                  },
+                },
+                {
+                  text: "19:00",
+                  onPress: async () => {
+                    setDailyReminderHour(19);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(19, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(19, 0);
+                    }
+                  },
+                },
+                {
+                  text: "20:00",
+                  onPress: async () => {
+                    setDailyReminderHour(20);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(20, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(20, 0);
+                    }
+                  },
+                },
+                {
+                  text: "21:00",
+                  onPress: async () => {
+                    setDailyReminderHour(21);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(21, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(21, 0);
+                    }
+                  },
+                },
+                {
+                  text: "22:00",
+                  onPress: async () => {
+                    setDailyReminderHour(22);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(22, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(22, 0);
+                    }
+                  },
+                },
+                {
+                  text: "23:00",
+                  onPress: async () => {
+                    setDailyReminderHour(23);
+                    setDailyReminderMinute(0);
+                    await notificationPreferences.setDailyReminderTime(23, 0);
+                    if (dailyReminderEnabled && notificationsEnabled) {
+                      await NotificationService.scheduleDailyReminder(23, 0);
+                    }
+                  },
+                },
+              ],
+            );
           },
         },
         {
@@ -262,8 +543,6 @@ export default function SettingsScreen() {
 
 function SettingRow({ item }: { item: SettingItem }) {
   const colors = useTheme();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const Icon = item.icon;
   const tint =
     item.type === "action" && item.danger ? colors.error : colors.primary;

@@ -26,7 +26,10 @@ export default function TransactionFormScreen() {
     updateTransaction,
     deleteTransaction,
     isLoading,
+    budgets,
+    transactions,
   } = useAppStore();
+  const budgetAlerts = useBudgetAlerts();
 
   const initialTxn = useMemo(
     () => (id ? transactionRepository.getById(id) : null),
@@ -83,14 +86,16 @@ export default function TransactionFormScreen() {
           const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
           const end = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
           const cat = categories.find((c) => c.id === activeCategoryId);
-          const bgs = (useAppStore() as any).budgets || [];
-          const budget = bgs.find((b: any) => b.categoryId === activeCategoryId && b.periodStart === start);
+          const budget = budgets.find((b: any) => b.categoryId === activeCategoryId && b.periodStart === start);
           if (budget && type === 'expense') {
-            await (useBudgetAlerts() as any).checkBudget({
+            const spentSoFar = transactions
+              .filter((t) => t.categoryId === activeCategoryId && t.type === 'expense' && t.date >= start && t.date <= end)
+              .reduce((sum, t) => sum + t.amount, 0) + amount;
+            await budgetAlerts.checkBudget({
               categoryId: budget.categoryId,
               categoryName: cat?.name,
               budget: budget.amount,
-              spent: 0,
+              spent: spentSoFar,
               periodStart: start,
               periodEnd: end,
             });

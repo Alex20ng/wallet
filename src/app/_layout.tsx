@@ -1,81 +1,109 @@
 import { Providers } from "@/components/providers";
+import { ThemedView } from "@/components/ui/themed-view";
 import { runMigrations } from "@/database/connection";
 import { loadThemePreference } from "@/hooks/theme-preference";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import NotificationService from "@/services/notifications/NotificationService";
+import { NotificationService } from "@/services/notifications/NotificationService";
+import { notificationPreferences } from "@/storage/notificationPreferences";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "../global.css";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-// Hide splash screen after initialization
 SplashScreen.preventAutoHideAsync();
-NotificationService.configure();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [databaseReady, setDatabaseReady] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Run database migrations on app start
-    const runDbMigrations = async () => {
+    (async () => {
       try {
         runMigrations();
-        setDatabaseReady(true);
-        SplashScreen.hideAsync();
-      } catch (error) {
-        console.error("Failed to run migrations:", error);
-        SplashScreen.hideAsync();
+        await loadThemePreference();
+        await NotificationService.configure();
+        const prefs = await notificationPreferences.getPreferences();
+        if (prefs.notificationsEnabled) {
+          await NotificationService.requestPermissions();
+          if (prefs.dailyReminderEnabled) {
+            await NotificationService.scheduleDailyReminder(
+              prefs.dailyReminderHour,
+              prefs.dailyReminderMinute,
+            );
+          }
+        }
+      } catch (e) {
+        console.error("[RootLayout]", e);
+      } finally {
+        setReady(true);
+        await SplashScreen.hideAsync();
       }
-    };
-    runDbMigrations();
+    })();
   }, []);
 
-  useEffect(() => {
-    loadThemePreference();
-  }, []);
-
-  if (!databaseReady) {
+  if (!ready) {
     return null;
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-        <Providers>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: colorScheme === "dark" ? "#0F172A" : "#F8FAFC",
-              },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="transaction/new"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="transaction/[id]"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="category-form"
-              options={{
-                presentation: "formSheet",
-                headerShown: false,
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: [0.7, 1],
-                sheetCornerRadius: 28,
-                contentStyle: { backgroundColor: "transparent" }, // Liquid Glass iOS 26
-              }}
-            />
-          </Stack>
-        </Providers>
+        <SafeAreaProvider>
+          <Providers>
+            <ThemedView style={{ flex: 1 }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: "slide_from_right",
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="transaction/[id]"
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="transaction/new"
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="category-form"
+                  options={{
+                    presentation: "formSheet",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="legal/terms"
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="legal/privacy"
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemedView>
+          </Providers>
+        </SafeAreaProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );

@@ -1,7 +1,12 @@
-import React, { forwardRef, ComponentRef } from 'react';
-import { Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolateColor } from 'react-native-reanimated';
-import { useTheme } from '../../hooks/use-theme';
+import { ComponentRef, forwardRef, useEffect } from "react";
+import { Pressable, StyleProp, StyleSheet, ViewStyle } from "react-native";
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { useTheme } from "../../hooks/use-theme";
 
 export interface SwitchProps {
   value: boolean;
@@ -15,9 +20,26 @@ export interface SwitchProps {
 const THUMB_TRAVEL = 20;
 
 const Switch = forwardRef<ComponentRef<typeof Pressable>, SwitchProps>(
-  ({ value, onValueChange, disabled = false, testID, accessibilityLabel, style }, ref) => {
+  (
+    {
+      value,
+      onValueChange,
+      disabled = false,
+      testID,
+      accessibilityLabel,
+      style,
+    },
+    ref,
+  ) => {
     const colors = useTheme();
     const progress = useSharedValue(value ? 1 : 0);
+
+    useEffect(() => {
+      progress.value = withSpring(value ? 1 : 0, {
+        damping: 16,
+        stiffness: 220,
+      });
+    }, [value, progress]);
 
     const animatedThumbStyle = useAnimatedStyle(() => ({
       transform: [{ translateX: progress.value * THUMB_TRAVEL }],
@@ -34,7 +56,10 @@ const Switch = forwardRef<ComponentRef<typeof Pressable>, SwitchProps>(
     const handlePress = () => {
       if (!disabled) {
         const newValue = !value;
-        progress.value = withSpring(newValue ? 1 : 0, { damping: 16, stiffness: 220 });
+        progress.value = withSpring(newValue ? 1 : 0, {
+          damping: 16,
+          stiffness: 220,
+        });
         onValueChange(newValue);
       }
     };
@@ -56,30 +81,30 @@ const Switch = forwardRef<ComponentRef<typeof Pressable>, SwitchProps>(
         </Animated.View>
       </Pressable>
     );
-  }
+  },
 );
 
-Switch.displayName = 'Switch';
+Switch.displayName = "Switch";
 
 const styles = StyleSheet.create({
   container: {
     width: 52,
     height: 32,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   track: {
-    width: '100%',
+    width: "100%",
     height: 32,
     borderRadius: 16,
     padding: 3,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   thumb: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
     shadowRadius: 3,

@@ -15,97 +15,115 @@ export interface BudgetCheckParams {
   periodEnd: number;
 }
 
+const isDev = __DEV__;
+
+function log(...args: any[]) {
+  if (isDev) console.log("[BudgetAlerts]", ...args);
+}
+
 export function useBudgetAlerts() {
   const checkBudget = useCallback(async (params: BudgetCheckParams) => {
-    const prefs = await notificationPreferences.getPreferences();
-    if (!prefs.notificationsEnabled || !prefs.budgetAlertsEnabled) return;
-
-    const {
-      categoryId,
-      categoryName = "catégorie",
-      budget,
-      spent,
-      periodStart,
-      periodEnd,
-    } = params;
-    if (budget <= 0) return;
-
-    const ratio = (spent / budget) * 100;
-    const exceeded = spent > budget ? spent - budget : 0;
-    const remaining = Math.max(0, budget - spent);
-
-    const periodKey = { periodStart, categoryId, alertType: "" };
-
-    // Exceeded (>100%)
-    if (spent > budget) {
-      const key: SentAlertKey = { ...periodKey, alertType: "exceeded" };
-      if (!(await notificationPreferences.hasSentAlert(key))) {
-        const body = `Budget dépassé de ${formatCurrency(exceeded)} dans la catégorie ${categoryName}.`;
-        await NotificationService.sendBudgetAlert(
-          {
-            type: "budget-exceeded",
-            categoryId,
-            categoryName,
-            budget,
-            spent,
-            exceeded,
-            periodStart,
-            periodEnd,
-          },
-          "Budget dépassé",
-          body,
-        );
-        await notificationPreferences.markAlertSent(key);
+    try {
+      const prefs = await notificationPreferences.getPreferences();
+      if (!prefs.notificationsEnabled || !prefs.budgetAlertsEnabled) {
+        log("Alerts disabled");
+        return;
       }
-      return;
-    }
+      const {
+        categoryId,
+        categoryName = "catégorie",
+        budget,
+        spent,
+        periodStart,
+        periodEnd,
+      } = params;
+      if (budget <= 0) return;
 
-    // Reached (100%)
-    if (ratio >= 100) {
-      const key: SentAlertKey = { ...periodKey, alertType: "reached" };
-      if (!(await notificationPreferences.hasSentAlert(key))) {
-        const body = `Vous avez atteint le plafond de votre budget ${categoryName}.`;
-        await NotificationService.sendBudgetAlert(
-          {
-            type: "budget-reached",
-            categoryId,
-            categoryName,
-            budget,
-            spent,
-            remaining,
-            periodStart,
-            periodEnd,
-          },
-          "Budget atteint",
-          body,
-        );
-        await notificationPreferences.markAlertSent(key);
-      }
-      return;
-    }
+      const ratio = (spent / budget) * 100;
+      const exceeded = spent > budget ? spent - budget : 0;
+      const remaining = Math.max(0, budget - spent);
 
-    // Warning (>= threshold)
-    if (ratio >= prefs.warningThreshold) {
-      const key: SentAlertKey = { ...periodKey, alertType: "warning" };
-      if (!(await notificationPreferences.hasSentAlert(key))) {
-        const body = `Attention, vous avez consommé ${Math.round(ratio)}% de votre budget ${categoryName} ce mois-ci.`;
-        await NotificationService.sendBudgetAlert(
-          {
-            type: "budget-warning",
-            categoryId,
-            categoryName,
-            budget,
-            spent,
-            remaining,
-            periodStart,
-            periodEnd,
-          },
-          "Alerte budgétaire",
-          body,
-        );
-        await notificationPreferences.markAlertSent(key);
+      if (spent > budget) {
+        const key: SentAlertKey = {
+          periodStart,
+          categoryId,
+          alertType: "exceeded",
+        };
+        if (!(await notificationPreferences.hasSentAlert(key))) {
+          const body = `Budget dépassé de ${formatCurrency(exceeded)} dans la catégorie ${categoryName}.`;
+          await NotificationService.sendBudgetAlert(
+            {
+              type: "budget-exceeded",
+              categoryId,
+              categoryName,
+              budget,
+              spent,
+              exceeded,
+              periodStart,
+              periodEnd,
+            },
+            "Budget dépassé",
+            body,
+          );
+          await notificationPreferences.markAlertSent(key);
+        }
+        return;
       }
-      return;
+
+      if (ratio >= 100) {
+        const key: SentAlertKey = {
+          periodStart,
+          categoryId,
+          alertType: "reached",
+        };
+        if (!(await notificationPreferences.hasSentAlert(key))) {
+          const body = `Vous avez atteint le plafond de votre budget ${categoryName}.`;
+          await NotificationService.sendBudgetAlert(
+            {
+              type: "budget-reached",
+              categoryId,
+              categoryName,
+              budget,
+              spent,
+              remaining,
+              periodStart,
+              periodEnd,
+            },
+            "Budget atteint",
+            body,
+          );
+          await notificationPreferences.markAlertSent(key);
+        }
+        return;
+      }
+
+      if (ratio >= prefs.warningThreshold) {
+        const key: SentAlertKey = {
+          periodStart,
+          categoryId,
+          alertType: "warning",
+        };
+        if (!(await notificationPreferences.hasSentAlert(key))) {
+          const body = `Attention, vous avez consommé ${Math.round(ratio)}% de votre budget ${categoryName} ce mois-ci.`;
+          await NotificationService.sendBudgetAlert(
+            {
+              type: "budget-warning",
+              categoryId,
+              categoryName,
+              budget,
+              spent,
+              remaining,
+              periodStart,
+              periodEnd,
+            },
+            "Alerte budgétaire",
+            body,
+          );
+          await notificationPreferences.markAlertSent(key);
+        }
+      }
+    } catch (e) {
+      log("checkBudget error", e);
     }
   }, []);
 

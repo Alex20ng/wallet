@@ -1,250 +1,175 @@
+import { haptics } from "@/hooks/use-haptics";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-const CHANNEL_ID = "reminders-v2";
+export const NOTIFICATION_CHANNEL_ID = "budget-alerts";
+const DAILY_REMINDER_ID = "daily-reminder";
 
-const IDS = {
-  dailyReminder: "daily-reminder",
-  monthlyReport: "monthly-report",
-} as const;
+export interface BudgetAlertPayload {
+  type:
+    | "budget-warning"
+    | "budget-reached"
+    | "budget-exceeded"
+    | "daily-reminder";
+  categoryId?: string;
+  categoryName?: string;
+  budget?: number;
+  spent?: number;
+  remaining?: number;
+  exceeded?: number;
+  periodStart?: number;
+  periodEnd?: number;
+}
 
-/** Les notifications locales planifiées ne sont pas disponibles sur le web. */
-const isSupported = Platform.OS !== "web";
+const isDev = __DEV__;
 
-let configured = false;
-
-/**
- * À appeler une fois au démarrage de l'app (par exemple dans app/_layout.tsx).
- * Définit l'affichage des notifications au premier plan et crée le canal Android.
- */
-export async function configureNotifications(): Promise<void> {
-  if (!isSupported || configured) return;
-  configured = true;
-
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: "Rappels",
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: "default",
-      vibrationPattern: [0, 250, 250, 250],
-    });
+function log(...args: any[]) {
+  if (isDev) {
+    console.log("[NotificationService]", ...args);
   }
 }
 
-/** Demande la permission si nécessaire. Renvoie true si elle est accordée. */
-export async function requestNotificationPermission(): Promise<boolean> {
-  if (!isSupported) return false;
+export class NotificationService {
+  private static initialized = false;
 
-  try {
-    // Android 13+ : le canal doit exister avant la demande de permission
-    await configureNotifications();
+  static async configure() {
+    if (this.initialized) return;
+    try {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
 
-    const current = await Notifications.getPermissionsAsync();
-    if (current.granted) return true;
-    if (!current.canAskAgain) return false;
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync(
+          NOTIFICATION_CHANNEL_ID,
+          {
+            name: "Alertes budgétaires",
+            description: "Notifications d'alerte pour vos budgets",
+            importance: Notifications.AndroidImportance.HIGH,
+            sound: "default",
+            showBadge: false,
+          },
+        );
+        log("Android channel configured");
+      }
+      this.initialized = true;
+      log("Configured");
+    } catch (e) {
+      log("Configure error", e);
+    }
+  }
 
-    const requested = await Notifications.requestPermissionsAsync();
-    return requested.granted;
-  } catch (error) {
-    console.warn("[Notifications] Permission impossible à obtenir :", error);
-    return false;
+  static async requestPermissions() {
+    try {
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== "granted") {
+        const { status } = await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowSound: true,
+            allowBadge: false,
+          },
+        });
+        finalStatus = status;
+      }
+      log("Permissions", finalStatus);
+      return finalStatus === "granted";
+    } catch (e) {
+      log("requestPermissions error", e);
+      return false;
+    }
+  }
+
+  static async checkPermissions() {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      return status === "granted";
+    } catch (e) {
+      log("checkPermissions error", e);
+      return false;
+    }
+  }
+
+  static async cancelDailyReminders() {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(DAILY_REMINDER_ID);
+      log("Cancelled daily reminder");
+    } catch (e) {
+      log("cancelDailyReminders error", e);
+    }
+  }
+
+  static async scheduleDailyReminder(hour: number, minute: number) {
+    try {
+      await this.cancelDailyReminders();
+      await Notifications.scheduleNotificationAsync({
+        identifier: DAILY_REMINDER_ID,
+        content: {
+          title: "Enregistrez vos dépenses",
+          body: "Avez-vous eu des dépenses aujourd'hui ? Enregistrez-les en 5 secondes.",
+          sound: "default",
+          data: {
+            type: "daily-reminder",
+            url: "/(tabs)/transactions",
+          } as Record<string, unknown>,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute,
+          channelId: NOTIFICATION_CHANNEL_ID,
+        },
+      });
+      log("Scheduled daily reminder", hour, minute);
+    } catch (e) {
+      log("scheduleDailyReminder error", e);
+    }
+  }
+
+  static async sendBudgetAlert(
+    payload: BudgetAlertPayload,
+    title: string,
+    body: string,
+  ) {
+    try {
+      const hasPermission = await this.checkPermissions();
+      if (!hasPermission) {
+        log("No permission, skipping alert");
+        return;
+      }
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: "default",
+          data: payload as unknown as Record<string, unknown>,
+        },
+        trigger: null,
+      });
+      await haptics.notification(haptics.NotificationFeedbackType.Warning);
+      log("Sent budget alert", payload.type);
+    } catch (e) {
+      log("sendBudgetAlert error", e);
+    }
+  }
+
+  static addNotificationReceivedListener(
+    listener: (event: Notifications.Notification) => void,
+  ) {
+    return Notifications.addNotificationReceivedListener(listener);
+  }
+
+  static addNotificationResponseReceivedListener(
+    listener: (response: Notifications.NotificationResponse) => void,
+  ) {
+    return Notifications.addNotificationResponseReceivedListener(listener);
   }
 }
-
-/** Vérifie la permission sans afficher de demande à l'utilisateur. */
-export async function hasNotificationPermission(): Promise<boolean> {
-  if (!isSupported) return false;
-  try {
-    const current = await Notifications.getPermissionsAsync();
-    return current.granted;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Rappel quotidien (par défaut à 20 h) pour enregistrer ses dépenses.
- * Renvoie true si le rappel est planifié.
- */
-export async function scheduleDailyReminder(
-  hour = 20,
-  minute = 0,
-): Promise<boolean> {
-  if (!isSupported) return false;
-  if (!(await requestNotificationPermission())) return false;
-
-  try {
-    await configureNotifications();
-    await cancelDailyReminder(); // évite les doublons
-
-    await Notifications.scheduleNotificationAsync({
-      identifier: IDS.dailyReminder,
-      content: {
-        sound: "default",
-        title: "Rappel Wallet",
-        body: "N'oubliez pas d'enregistrer vos dépenses du jour.",
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour,
-        minute,
-        channelId: CHANNEL_ID,
-      },
-    });
-    return true;
-  } catch (error) {
-    console.warn("[Notifications] Rappel quotidien non planifié :", error);
-    return false;
-  }
-}
-
-/**
- * Rapport mensuel (par défaut le 1er du mois à 9 h).
- * iOS : déclencheur de calendrier. Android : déclencheur mensuel.
- */
-export async function scheduleMonthlyReport(
-  day = 1,
-  hour = 9,
-  minute = 0,
-): Promise<boolean> {
-  if (!isSupported) return false;
-  if (!(await requestNotificationPermission())) return false;
-
-  try {
-    await configureNotifications();
-    await cancelMonthlyReport();
-
-    await Notifications.scheduleNotificationAsync({
-      identifier: IDS.monthlyReport,
-      content: {
-        sound: "default",
-        title: "Votre résumé du mois",
-        body: "Consultez le bilan de vos revenus et dépenses.",
-      },
-      trigger:
-        Platform.OS === "ios"
-          ? {
-              type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-              day,
-              hour,
-              minute,
-              repeats: true,
-            }
-          : {
-              type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
-              day,
-              hour,
-              minute,
-              channelId: CHANNEL_ID,
-            },
-    });
-    return true;
-  } catch (error) {
-    console.warn("[Notifications] Rapport mensuel non planifié :", error);
-    return false;
-  }
-}
-
-/** Alerte immédiate quand un budget approche de sa limite. */
-export async function sendBudgetAlert(
-  categoryName: string,
-  percent: number,
-): Promise<void> {
-  if (!isSupported) return;
-  if (!(await requestNotificationPermission())) return;
-
-  try {
-    await configureNotifications();
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        sound: "default",
-        title: "Budget bientôt atteint",
-        body: `« ${categoryName} » : ${Math.round(percent)}% du budget utilisé.`,
-      },
-      trigger: null, // immédiat
-    });
-  } catch (error) {
-    console.warn("[Notifications] Alerte de budget non envoyée :", error);
-  }
-}
-
-export async function cancelDailyReminder(): Promise<void> {
-  if (!isSupported) return;
-  try {
-    await Notifications.cancelScheduledNotificationAsync(IDS.dailyReminder);
-  } catch {
-    // Rien à annuler
-  }
-}
-
-export async function cancelMonthlyReport(): Promise<void> {
-  if (!isSupported) return;
-  try {
-    await Notifications.cancelScheduledNotificationAsync(IDS.monthlyReport);
-  } catch {
-    // Rien à annuler
-  }
-}
-
-export async function cancelAllNotifications(): Promise<void> {
-  if (!isSupported) return;
-  try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-  } catch (error) {
-    console.warn("[Notifications] Annulation impossible :", error);
-  }
-}
-
-/*
-export async function scheduleTestNotification(seconds = 10): Promise<boolean> {
-  if (!isSupported) return false;
-  if (!(await requestNotificationPermission())) return false;
-
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        sound: "default",
-        title: "Test planifié",
-        body: `Cette notification a été planifiée ${seconds} secondes plus tôt.`,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds,
-        repeats: false,
-        channelId: CHANNEL_ID,
-      },
-    });
-    return true;
-  } catch (error) {
-    console.warn("[Notifications] Test planifié impossible :", error);
-    return false;
-  }
-}
-*/
-
-/**
- * Objet regroupant toutes les fonctions : permet d'écrire
- * `NotificationService.scheduleDailyReminder(...)` comme dans settings.tsx.
- */
-export const NotificationService = {
-  configure: configureNotifications,
-  requestPermissions: requestNotificationPermission,
-  hasPermission: hasNotificationPermission,
-  scheduleDailyReminder,
-  cancelDailyReminders: cancelDailyReminder,
-  scheduleMonthlyReport,
-  cancelMonthlyReport,
-  sendBudgetAlert,
-  cancelAll: cancelAllNotifications,
-};
-
-export default NotificationService;
