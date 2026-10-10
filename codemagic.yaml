@@ -7,11 +7,11 @@
 #   - Gestionnaire de paquets : npm (package-lock.json présent).
 #   - Package Android : com.alex20ng.wallet (défini dans app.json).
 #
-# Deux workflows sont fournis :
+# Deux workflows sont fournis (aucun keystore requis) :
 #   1) android-debug   -> APK de debug, signé automatiquement avec la clé debug.
-#                         Idéal pour tester rapidement, aucune config de signature.
-#   2) android-release -> APK de release signé avec TON keystore (à uploader).
-#                         À utiliser pour distribuer / publier.
+#   2) android-release -> APK de release (optimisé), également signé avec la
+#                         clé debug par défaut : installable immédiatement.
+#                         Voir "POUR SIGNER EN RELEASE" en bas pour une vraie clé.
 #
 # -----------------------------------------------------------------------------
 # CE QUE TU DOIS CONFIGURER DANS LE PANEL CODEMAGIC (UI)
@@ -19,17 +19,17 @@
 # 1) Ajouter le dépôt Git comme application Codemagic, puis cliquer sur
 #    "Check for configuration file" pour détecter ce codemagic.yaml.
 #
-# 2) Signer la release (workflow android-release uniquement) :
+# 2) Signer la release (OPTIONNEL, workflow android-release uniquement) :
+#    Par défaut le build ne nécessite AUCUN keystore (voir "POUR SIGNER EN
+#    RELEASE" en bas). Si tu veux une vraie signature de distribution :
 #    Team settings > "codemagic.yaml settings" > "Code signing identities" >
 #    onglet "Android keystores" > "Add keystore".
 #      - Upload le fichier .keystore
 #      - Renseigne : Keystore password, Key alias, Key password
-#      - "Reference name" = wallet_keystore  (doit matcher android_signing ci-dessous)
+#      - "Reference name" = wallet_keystore
 #    Générer un keystore si tu n'en as pas :
 #      keytool -genkey -v -keystore wallet.keystore -storetype JKS \
 #        -keyalg RSA -keysize 2048 -validity 10000 -alias wallet
-#    Codemagic exposera automatiquement ces variables sur la machine :
-#      CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
 #
 # 3) Variables d'environnement (optionnel) :
 #    Codemagic UI > "Environment variables" : crée un groupe (ex: "wallet_env")
@@ -90,18 +90,18 @@ workflows:
       - android/app/build/outputs/**/*.apk
 
   # ---------------------------------------------------------------------------
-  # WORKFLOW 2 — APK de RELEASE signé avec ton keystore
+  # WORKFLOW 2 — APK de RELEASE (aucun keystore requis par défaut)
   # ---------------------------------------------------------------------------
   android-release:
-    name: Wallet Android (Release APK signed)
+    name: Wallet Android (Release APK)
     max_build_duration: 60
     instance_type: linux_x2
 
     environment:
-      # Récupère le keystore uploadé dans Codemagic (cf. section UI en haut du fichier).
-      # La "Reference name" ici DOIT être identique à celle saisie dans le panel.
-      android_signing:
-        - wallet_keystore
+      # NOTE : pas de keystore configuré ici. L'APK release est donc signé
+      # automatiquement avec la clé debug de l'app (installable, mais pas
+      # publiable sur le Play Store). Pour une vraie signature de release,
+      # voir la section "Pour signer en release" en bas du fichier.
       node: 22.14.0
       java: 17
       # groups:
@@ -126,16 +126,12 @@ workflows:
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
 
       # Compilation de l'APK release.
-      # Les propriétés "android.injected.signing.*" permettent d'injecter la
-      # signature SANS éditer android/app/build.gradle (respecte le CNG d'Expo).
-      - name: Build signed release APK
+      # Sans configuration de signature dédiée, le template Expo signe la
+      # release avec la clé debug (résultat installable immédiatement).
+      - name: Build release APK
         script: |
           cd android
-          ./gradlew assembleRelease --no-daemon \
-            -Pandroid.injected.signing.store.file="$CM_KEYSTORE_PATH" \
-            -Pandroid.injected.signing.store.password="$CM_KEYSTORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$CM_KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
+          ./gradlew assembleRelease --no-daemon
 
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
@@ -153,6 +149,20 @@ workflows:
 # =============================================================================
 # NOTES / ALTERNATIVES
 # -----------------------------------------------------------------------------
+# - POUR SIGNER EN RELEASE (vraie clé de distribution) :
+#   1) Upload ton keystore dans Codemagic (Reference name = wallet_keystore).
+#   2) Dans le workflow android-release, sous `environment`, ajoute :
+#        android_signing:
+#          - wallet_keystore
+#   3) Remplace la commande de compilation par :
+#        cd android
+#        ./gradlew assembleRelease --no-daemon \
+#          -Pandroid.injected.signing.store.file="$CM_KEYSTORE_PATH" \
+#          -Pandroid.injected.signing.store.password="$CM_KEYSTORE_PASSWORD" \
+#          -Pandroid.injected.signing.key.alias="$CM_KEY_ALIAS" \
+#          -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
+#   (l'injection évite d'éditer android/app/build.gradle -> respecte le CNG)
+#
 # - Build EAS dans le cloud à la place de Gradle : remplace l'étape de
 #   compilation par `npx eas-cli build --platform android --profile preview
 #   --local --non-interactive` (nécessite EXPO_TOKEN en variable secrète).
