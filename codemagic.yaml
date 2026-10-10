@@ -1,0 +1,167 @@
+# =============================================================================
+# codemagic.yaml — CI/CD Android (APK) pour l'app Expo "wallet"
+# -----------------------------------------------------------------------------
+# Stack détectée : Expo SDK 57 / React Native 0.86 (Continuous Native Generation).
+#   - Les dossiers natifs ios/ et android/ ne sont PAS versionnés : ils sont
+#     générés à la volée par `expo prebuild` pendant le build (voir plus bas).
+#   - Gestionnaire de paquets : npm (package-lock.json présent).
+#   - Package Android : com.alex20ng.wallet (défini dans app.json).
+#
+# Deux workflows sont fournis :
+#   1) android-debug   -> APK de debug, signé automatiquement avec la clé debug.
+#                         Idéal pour tester rapidement, aucune config de signature.
+#   2) android-release -> APK de release signé avec TON keystore (à uploader).
+#                         À utiliser pour distribuer / publier.
+#
+# -----------------------------------------------------------------------------
+# CE QUE TU DOIS CONFIGURER DANS LE PANEL CODEMAGIC (UI)
+# -----------------------------------------------------------------------------
+# 1) Ajouter le dépôt Git comme application Codemagic, puis cliquer sur
+#    "Check for configuration file" pour détecter ce codemagic.yaml.
+#
+# 2) Signer la release (workflow android-release uniquement) :
+#    Team settings > "codemagic.yaml settings" > "Code signing identities" >
+#    onglet "Android keystores" > "Add keystore".
+#      - Upload le fichier .keystore
+#      - Renseigne : Keystore password, Key alias, Key password
+#      - "Reference name" = wallet_keystore  (doit matcher android_signing ci-dessous)
+#    Générer un keystore si tu n'en as pas :
+#      keytool -genkey -v -keystore wallet.keystore -storetype JKS \
+#        -keyalg RSA -keysize 2048 -validity 10000 -alias wallet
+#    Codemagic exposera automatiquement ces variables sur la machine :
+#      CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
+#
+# 3) Variables d'environnement (optionnel) :
+#    Codemagic UI > "Environment variables" : crée un groupe (ex: "wallet_env")
+#    pour tes secrets (clés API, tokens...). Référence-le via `groups:` plus bas.
+#    Ne JAMAIS mettre de secret en clair dans ce fichier.
+#
+# 4) Déclencher un build : bouton "Start new build" > choisis le workflow.
+# =============================================================================
+
+workflows:
+  # ---------------------------------------------------------------------------
+  # WORKFLOW 1 — APK de DEBUG (aucune signature à configurer)
+  # ---------------------------------------------------------------------------
+  android-debug:
+    name: Wallet Android (Debug APK)
+    max_build_duration: 60 # durée max du build en minutes
+    instance_type: linux_x2 # machine Linux (moins chère ; pas besoin de macOS pour Android)
+
+    environment:
+      # --- Chaîne d'outils ---
+      node: 22.14.0 # Node LTS requis par React Native 0.86
+      java: 17 # JDK 17 requis par la build Android (AGP / Gradle 8)
+      # groups:                            # Décommente et liste tes groupes de variables Codemagic
+      #   - wallet_env
+      vars:
+        PACKAGE_NAME: "com.alex20ng.wallet" # doit correspondre à app.json > expo.android.package
+
+    # Cache pour accélérer les builds suivants (deps npm + Gradle)
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+
+    scripts:
+      # 1) Installation des dépendances JS (npm ci = install reproductible depuis le lockfile)
+      - name: Install npm dependencies
+        script: npm ci
+
+      # 2) Génération des projets natifs (dossier android/) depuis app.json + config plugins.
+      #    --clean : repart d'un dossier propre ; --no-install : on a déjà installé les deps.
+      - name: Expo Prebuild (generate android/)
+        script: npx expo prebuild --platform android --clean --no-install
+
+      # 3) Indique à Gradle où se trouve le SDK Android fourni par la machine Codemagic.
+      - name: Set Android SDK location
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+
+      # 4) Compilation de l'APK debug (signé automatiquement avec debug.keystore).
+      - name: Build debug APK
+        script: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+    # Fichiers récupérables en fin de build (onglet "Artifacts" / téléchargement).
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
+      - android/app/build/outputs/**/*.apk
+
+  # ---------------------------------------------------------------------------
+  # WORKFLOW 2 — APK de RELEASE signé avec ton keystore
+  # ---------------------------------------------------------------------------
+  android-release:
+    name: Wallet Android (Release APK signed)
+    max_build_duration: 60
+    instance_type: linux_x2
+
+    environment:
+      # Récupère le keystore uploadé dans Codemagic (cf. section UI en haut du fichier).
+      # La "Reference name" ici DOIT être identique à celle saisie dans le panel.
+      android_signing:
+        - wallet_keystore
+      node: 22.14.0
+      java: 17
+      # groups:
+      #   - wallet_env
+      vars:
+        PACKAGE_NAME: "com.alex20ng.wallet"
+
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Expo Prebuild (generate android/)
+        script: npx expo prebuild --platform android --clean --no-install
+
+      - name: Set Android SDK location
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+
+      # Compilation de l'APK release.
+      # Les propriétés "android.injected.signing.*" permettent d'injecter la
+      # signature SANS éditer android/app/build.gradle (respecte le CNG d'Expo).
+      - name: Build signed release APK
+        script: |
+          cd android
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$CM_KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$CM_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$CM_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
+
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/**/*.apk
+
+    # Publishing optionnel : notifie par e-mail et joint les artefacts.
+    # publishing:
+    #   email:
+    #     recipients:
+    #       - ton.email@example.com
+    #     notify:
+    #       success: true
+    #       failure: true
+
+# =============================================================================
+# NOTES / ALTERNATIVES
+# -----------------------------------------------------------------------------
+# - Build EAS dans le cloud à la place de Gradle : remplace l'étape de
+#   compilation par `npx eas-cli build --platform android --profile preview
+#   --local --non-interactive` (nécessite EXPO_TOKEN en variable secrète).
+#   Le profil "preview" de eas.json produit déjà un APK (buildType: apk).
+#
+# - Pour un AAB (Google Play) au lieu d'un APK : remplace `assembleRelease`
+#   par `bundleRelease` et adapte le chemin d'artefact vers
+#   android/app/build/outputs/bundle/release/*.aab
+#
+# - Si un build échoue à cause d'un SDK Android manquant, ajoute avant la
+#   compilation : sdkmanager "platforms;android-36" "build-tools;36.0.0"
+# =============================================================================
