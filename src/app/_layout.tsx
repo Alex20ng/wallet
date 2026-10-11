@@ -1,6 +1,7 @@
 import "../global.css";
 
 import { Providers } from "@/components/providers";
+import { AnimatedSplash } from "@/components/splash/AnimatedSplash";
 import { ThemedView } from "@/components/ui/themed-view";
 import { runMigrations } from "@/database/connection";
 import { loadThemePreference } from "@/hooks/theme-preference";
@@ -10,14 +11,18 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ duration: 400, fade: true });
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
+
+  const handleSplashFinish = useCallback(() => setSplashDone(true), []);
 
   useEffect(() => {
     (async () => {
@@ -39,14 +44,9 @@ export default function RootLayout() {
         console.error("[RootLayout]", e);
       } finally {
         setReady(true);
-        await SplashScreen.hideAsync();
       }
     })();
   }, []);
-
-  if (!ready) {
-    return null;
-  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -54,59 +54,64 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <Providers>
             <ThemedView style={{ flex: 1 }}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: "slide_from_right",
-                  contentStyle: { backgroundColor: "transparent" },
-                }}
-              >
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="transaction/[id]"
-                  options={{
-                    presentation: "modal",
-                    animation: "slide_from_bottom",
+              {ready ? (
+                <Stack
+                  screenOptions={{
                     headerShown: false,
+                    animation: "slide_from_right",
+                    contentStyle: { backgroundColor: "transparent" },
                   }}
-                />
-                <Stack.Screen
-                  name="transaction/new"
-                  options={{
-                    presentation: "modal",
-                    animation: "slide_from_bottom",
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="category-form"
-                  options={{
-                    presentation: "formSheet",
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="legal/terms"
-                  options={{
-                    presentation: "modal",
-                    animation: "slide_from_bottom",
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="legal/privacy"
-                  options={{
-                    presentation: "modal",
-                    animation: "slide_from_bottom",
-                    headerShown: false,
-                  }}
-                />
-              </Stack>
+                >
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="transaction/[id]"
+                    options={{
+                      presentation: "modal",
+                      animation: "slide_from_bottom",
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="transaction/new"
+                    options={{
+                      presentation: "modal",
+                      animation: "slide_from_bottom",
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="category-form"
+                    options={{
+                      presentation: "formSheet",
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="legal/terms"
+                    options={{
+                      presentation: "modal",
+                      animation: "slide_from_bottom",
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="legal/privacy"
+                    options={{
+                      presentation: "modal",
+                      animation: "slide_from_bottom",
+                      headerShown: false,
+                    }}
+                  />
+                </Stack>
+              ) : null}
               <StatusBar style="auto" />
             </ThemedView>
           </Providers>
         </SafeAreaProvider>
       </BottomSheetModalProvider>
+      {!splashDone ? (
+        <AnimatedSplash isReady={ready} onFinish={handleSplashFinish} />
+      ) : null}
     </GestureHandlerRootView>
   );
 }
