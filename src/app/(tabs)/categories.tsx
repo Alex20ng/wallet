@@ -8,8 +8,9 @@ import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useAppStore } from "@/store/useAppStore";
 import type { Category } from "@/types";
+import { useFocusEffect } from "expo-router";
 import { Plus } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 export default function CategoriesScreen() {
@@ -18,9 +19,11 @@ export default function CategoriesScreen() {
   const sheetRef = React.useRef<CategoryFormSheetRef>(null);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialData();
+    }, [loadInitialData]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

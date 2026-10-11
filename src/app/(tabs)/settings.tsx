@@ -8,7 +8,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { CURRENCY_CODE, CURRENCY_LOCALE } from "@/services/currency";
 import { NotificationService } from "@/services/notifications/NotificationService";
 import { notificationPreferences } from "@/storage/notificationPreferences";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import type { LucideIcon } from "lucide-react-native";
 import {
   Bell,
@@ -20,7 +20,7 @@ import {
   Shield,
   Wallet,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 type SettingItem = {
@@ -52,29 +52,35 @@ export default function SettingsScreen() {
   const [dailyReminderHour, setDailyReminderHour] = useState(20);
   const [dailyReminderMinute, setDailyReminderMinute] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      const p = await notificationPreferences.getPreferences();
-      const granted = await NotificationService.checkPermissions();
+  const loadPreferences = useCallback(async () => {
+    const p = await notificationPreferences.getPreferences();
+    const granted = await NotificationService.checkPermissions();
 
-      // L'interrupteur reflète la réalité : si l'utilisateur a retiré la
-      // permission dans les réglages du téléphone, il repasse à « désactivé »
-      setNotificationsEnabled(p.notificationsEnabled && granted);
-      setBudgetAlertsEnabled(p.budgetAlertsEnabled);
-      setDailyReminderEnabled(p.dailyReminderEnabled && granted);
-      setWarningThreshold(p.warningThreshold);
-      setDailyReminderHour(p.dailyReminderHour);
-      setDailyReminderMinute(p.dailyReminderMinute);
+    // L'interrupteur reflète la réalité : si l'utilisateur a retiré la
+    // permission dans les réglages du téléphone, il repasse à « désactivé »
+    setNotificationsEnabled(p.notificationsEnabled && granted);
+    setBudgetAlertsEnabled(p.budgetAlertsEnabled);
+    setDailyReminderEnabled(p.dailyReminderEnabled && granted);
+    setWarningThreshold(p.warningThreshold);
+    setDailyReminderHour(p.dailyReminderHour);
+    setDailyReminderMinute(p.dailyReminderMinute);
 
-      // Remet le rappel en place si besoin (pas de doublon : même identifiant)
-      if (granted && p.notificationsEnabled && p.dailyReminderEnabled) {
-        await NotificationService.scheduleDailyReminder(
-          p.dailyReminderHour,
-          p.dailyReminderMinute,
-        );
-      }
-    })();
+    // Remet le rappel en place si besoin (pas de doublon : même identifiant)
+    if (granted && p.notificationsEnabled && p.dailyReminderEnabled) {
+      await NotificationService.scheduleDailyReminder(
+        p.dailyReminderHour,
+        p.dailyReminderMinute,
+      );
+    }
   }, []);
+
+  // Recharge les préférences à chaque focus : l'écran reste cohérent avec
+  // l'état réel (permissions révoquées, réglages modifiés ailleurs).
+  useFocusEffect(
+    useCallback(() => {
+      loadPreferences();
+    }, [loadPreferences]),
+  );
 
   const settingsSections: SettingSection[] = [
     {

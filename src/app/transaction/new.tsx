@@ -7,7 +7,6 @@ import { ThemedView, ThemedText, Button, Input, Select, NumberInput } from '@/co
 import { Screen, PageHeader } from '@/components/layout';
 import { useAppStore } from '@/store/useAppStore';
 import { useBudgetAlerts } from '@/hooks/alerts/useBudgetAlerts';
-import { transactionRepository } from '@/repositories';
 import { type TransactionType } from '@/services/currency';
 import { spacing, borderRadius, shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -26,14 +25,14 @@ export default function TransactionFormScreen() {
     updateTransaction,
     deleteTransaction,
     isLoading,
-    budgets,
+    monthBudgetItems,
     transactions,
   } = useAppStore();
   const budgetAlerts = useBudgetAlerts();
 
   const initialTxn = useMemo(
-    () => (id ? transactionRepository.getById(id) : null),
-    [id],
+    () => (id ? transactions.find((t) => t.id === id) ?? null : null),
+    [id, transactions],
   );
 
   const [type, setType] = React.useState<TransactionType>(
@@ -86,7 +85,7 @@ export default function TransactionFormScreen() {
           const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
           const end = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
           const cat = categories.find((c) => c.id === activeCategoryId);
-          const budget = budgets.find((b: any) => b.categoryId === activeCategoryId && b.periodStart === start);
+          const budget = monthBudgetItems.find((item) => item.budget.categoryId === activeCategoryId)?.budget;
           if (budget && type === 'expense') {
             const spentSoFar = transactions
               .filter((t) => t.categoryId === activeCategoryId && t.type === 'expense' && t.date >= start && t.date <= end)
@@ -100,7 +99,9 @@ export default function TransactionFormScreen() {
               periodEnd: end,
             });
           }
-        } catch {}
+        } catch (error) {
+          console.warn('[budget alert]', error);
+        }
       }
       await haptics.notification(haptics.NotificationFeedbackType.Success);
       router.back();

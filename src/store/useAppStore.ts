@@ -3,7 +3,24 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TransactionType, PeriodPreset, PeriodRange, FilterOptions, Category, Transaction, Budget, TransactionWithCategory } from '../types';
 import { getPeriodRange } from '../services/currency';
+import { endOfMonth, startOfMonth } from '../services/date';
 import { categoryRepository, transactionRepository, budgetRepository } from '../repositories';
+
+export interface BudgetItem {
+  budget: Budget;
+  category: Category | null;
+  spent: number;
+}
+
+interface DashboardStatsState {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  expenseByCategory: { categoryId: string; categoryName: string; categoryIcon: string; categoryColor: string; amount: number; percentage: number; transactionCount: number }[];
+  incomeByCategory: { categoryId: string; categoryName: string; categoryIcon: string; categoryColor: string; amount: number; percentage: number; transactionCount: number }[];
+  dailyTrend: { date: string; income: number; expense: number }[];
+  monthlyComparison: { month: string; income: number; expense: number; balance: number }[];
+}
 
 interface AppState {
   // UI State
@@ -15,31 +32,29 @@ interface AppState {
   selectedCategoryIds: string[];
   isLoading: boolean;
   error: string | null;
+  initialized: boolean;
 
   // Data State
   categories: Category[];
   transactions: TransactionWithCategory[];
   budgets: Budget[];
-  dashboardStats: {
-    totalIncome: number;
-    totalExpense: number;
-    balance: number;
-    expenseByCategory: { categoryId: string; categoryName: string; categoryIcon: string; categoryColor: string; amount: number; percentage: number; transactionCount: number }[];
-    incomeByCategory: { categoryId: string; categoryName: string; categoryIcon: string; categoryColor: string; amount: number; percentage: number; transactionCount: number }[];
-    dailyTrend: { date: string; income: number; expense: number }[];
-    monthlyComparison: { month: string; income: number; expense: number; balance: number }[];
-  } | null;
+  budgetItems: BudgetItem[];
+  monthBudgetItems: BudgetItem[];
+  budgetsPeriod: { start: number; end: number } | null;
+  dashboardStats: DashboardStatsState | null;
 
   // Actions
   setPeriod: (preset: PeriodPreset, customStart?: number, customEnd?: number) => void;
   setFilterType: (type: TransactionType | 'all') => void;
   toggleCategoryFilter: (categoryId: string) => void;
   clearCategoryFilters: () => void;
+  refreshData: () => Promise<void>;
   loadInitialData: () => Promise<void>;
   loadDashboardStats: () => Promise<void>;
   loadTransactions: (options?: FilterOptions) => Promise<void>;
   loadCategories: () => Promise<void>;
   loadBudgets: (periodStart?: number, periodEnd?: number) => Promise<void>;
+  loadMonthBudgetItems: () => Promise<void>;
   addTransaction: (txn: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Transaction>;
   updateTransaction: (id: string, updates: Partial<Omit<Transaction, 'id' | 'createdAt'>>) => Promise<Transaction | null>;
   deleteTransaction: (id: string) => Promise<boolean>;
@@ -51,6 +66,14 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
+}
+
+function getCurrentMonthPeriod(): { start: number; end: number } {
+  const now = new Date();
+  return {
+    start: startOfMonth(now).getTime(),
+    end: endOfMonth(now).getTime(),
+  };
 }
 
 export const useAppStore = create<AppState>()(
@@ -65,9 +88,13 @@ export const useAppStore = create<AppState>()(
       selectedCategoryIds: [],
       isLoading: false,
       error: null,
+      initialized: false,
       categories: [],
       transactions: [],
       budgets: [],
+      budgetItems: [],
+      monthBudgetItems: [],
+      budgetsPeriod: null,
       dashboardStats: null,
 
       // Actions
@@ -103,19 +130,29 @@ export const useAppStore = create<AppState>()(
         get().loadTransactions();
       },
 
+      /**
+       * Source de vérité unique : recharge toutes les données dépendantes.
+       * À appeler après chaque mutation et au retour sur un écran (focus).
+       * L'ordre importe : les catégories d'abord, car les budgets en dérivent.
+       */
+      refreshData: async () => {
+        await get().loadCategories();
+        await get().loadDashboardStats();
+        await get().loadTransactions();
+        await get().loadBudgets();
+        await get().loadMonthBudgetItems();
+      },
+
       loadInitialData: async () => {
-        set({ isLoading: true, error: null });
+        const firstLoad = !get().initialized;
+        if (firstLoad) set({ isLoading: true, error: null });
         try {
-          await Promise.all([
-            get().loadCategories(),
-            get().loadBudgets(),
-          ]);
-          await get().loadDashboardStats();
-          await get().loadTransactions();
+          await get().refreshData();
+          set({ initialized: true });
         } catch {
           set({ error: 'Erreur lors du chargement des données' });
         } finally {
-          set({ isLoading: false });
+          if (firstLoad) set({ isLoading: false });
         }
       },
 
@@ -155,14 +192,48 @@ export const useAppStore = create<AppState>()(
       },
 
       loadBudgets: async (periodStart, periodEnd) => {
-        const { currentPeriodRange } = get();
-        const start = periodStart ?? currentPeriodRange.start;
-        const end = periodEnd ?? currentPeriodRange.end;
+        const { budgetsPeriod } = get();
+        const period =
+          periodStart !== undefined && periodEnd !== undefined
+            ? { start: periodStart, end: periodEnd }
+            : budgetsPeriod ?? getCurrentMonthPeriod();
         try {
-          const budgets = budgetRepository.getAll(start, end);
-          set({ budgets });
+          const budgets = budgetRepository.getAll(period.start, period.end);
+          const categories = get().categories;
+          const spentByCategory = new Map(
+            transactionRepository
+              .getExpenseTotalsByCategory(period.start, period.end)
+              .map((total) => [total.categoryId, total.amount]),
+          );
+          const budgetItems = budgets.map((budget) => ({
+            budget,
+            category: categories.find((c) => c.id === budget.categoryId) ?? null,
+            spent: spentByCategory.get(budget.categoryId) ?? 0,
+          }));
+          set({ budgets, budgetItems, budgetsPeriod: period });
         } catch (error) {
           console.error('Failed to load budgets:', error);
+        }
+      },
+
+      loadMonthBudgetItems: async () => {
+        const period = getCurrentMonthPeriod();
+        try {
+          const budgets = budgetRepository.getAll(period.start, period.end);
+          const categories = get().categories;
+          const spentByCategory = new Map(
+            transactionRepository
+              .getExpenseTotalsByCategory(period.start, period.end)
+              .map((total) => [total.categoryId, total.amount]),
+          );
+          const monthBudgetItems = budgets.map((budget) => ({
+            budget,
+            category: categories.find((c) => c.id === budget.categoryId) ?? null,
+            spent: spentByCategory.get(budget.categoryId) ?? 0,
+          }));
+          set({ monthBudgetItems });
+        } catch (error) {
+          console.error('Failed to load month budgets:', error);
         }
       },
 
@@ -170,9 +241,7 @@ export const useAppStore = create<AppState>()(
         set({ isLoading: true });
         try {
           const created = transactionRepository.create(txn);
-          await get().loadTransactions();
-          await get().loadDashboardStats();
-          await get().loadBudgets();
+          await get().refreshData();
           return created;
         } catch (error) {
           set({ error: 'Erreur lors de la création de la transaction' });
@@ -187,9 +256,7 @@ export const useAppStore = create<AppState>()(
         try {
           const updated = transactionRepository.update(id, updates);
           if (updated) {
-            await get().loadTransactions();
-            await get().loadDashboardStats();
-            await get().loadBudgets();
+            await get().refreshData();
           }
           return updated;
         } catch (error) {
@@ -205,9 +272,7 @@ export const useAppStore = create<AppState>()(
         try {
           const result = transactionRepository.delete(id);
           if (result) {
-            await get().loadTransactions();
-            await get().loadDashboardStats();
-            await get().loadBudgets();
+            await get().refreshData();
           }
           return result;
         } catch (error) {
@@ -222,7 +287,7 @@ export const useAppStore = create<AppState>()(
         set({ isLoading: true });
         try {
           const created = categoryRepository.create(category);
-          await get().loadCategories();
+          await get().refreshData();
           return created;
         } catch (error) {
           set({ error: 'Erreur lors de la création de la catégorie' });
@@ -237,9 +302,7 @@ export const useAppStore = create<AppState>()(
         try {
           const updated = categoryRepository.update(id, updates);
           if (updated) {
-            await get().loadCategories();
-            await get().loadDashboardStats();
-            await get().loadTransactions();
+            await get().refreshData();
           }
           return updated;
         } catch (error) {
@@ -255,8 +318,7 @@ export const useAppStore = create<AppState>()(
         try {
           const result = categoryRepository.delete(id);
           if (result) {
-            await get().loadCategories();
-            await get().loadDashboardStats();
+            await get().refreshData();
           }
           return result;
         } catch (error) {
@@ -271,8 +333,8 @@ export const useAppStore = create<AppState>()(
         set({ isLoading: true });
         try {
           const created = budgetRepository.upsert(budget);
-          await get().loadBudgets(budget.periodStart, budget.periodEnd);
-          await get().loadDashboardStats();
+          set({ budgetsPeriod: { start: budget.periodStart, end: budget.periodEnd } });
+          await get().refreshData();
           return created;
         } catch (error) {
           set({ error: 'Erreur lors de la sauvegarde du budget' });
@@ -289,11 +351,9 @@ export const useAppStore = create<AppState>()(
           const result = budgetRepository.delete(id);
           if (result) {
             if (existing) {
-              await get().loadBudgets(existing.periodStart, existing.periodEnd);
-            } else {
-              await get().loadBudgets();
+              set({ budgetsPeriod: { start: existing.periodStart, end: existing.periodEnd } });
             }
-            await get().loadDashboardStats();
+            await get().refreshData();
           }
           return result;
         } catch (error) {

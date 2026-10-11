@@ -1,3 +1,5 @@
+import "../global.css";
+
 import { Providers } from "@/components/providers";
 import { ThemedView } from "@/components/ui/themed-view";
 import { runMigrations } from "@/database/connection";

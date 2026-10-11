@@ -11,14 +11,14 @@ import {
 import { borderRadius, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { categoryRepository } from "@/repositories";
 import { formatCurrency } from "@/services/currency";
 import { endOfMonth, getMonthOptions, startOfMonth } from "@/services/date";
 import { useAppStore } from "@/store/useAppStore";
 import type { Budget, Category } from "@/types";
 import NativeSlider from "@react-native-community/slider";
+import { useFocusEffect } from "expo-router";
 import { Plus } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -31,11 +31,10 @@ export default function BudgetsScreen() {
   const {
     loadInitialData,
     loadBudgets,
-    budgets,
+    budgetItems,
     categories,
     upsertBudget,
     deleteBudget,
-    transactions,
     isLoading,
   } = useAppStore();
 
@@ -61,13 +60,16 @@ export default function BudgetsScreen() {
 
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
-
-  useEffect(() => {
-    loadBudgets(monthStart.getTime(), monthEnd.getTime());
-  }, [loadBudgets, monthStart, monthEnd]);
+  // Au focus (et quand le mois change), on recharge toutes les données puis
+  // les budgets du mois sélectionné : la période choisie est préservée.
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        await loadInitialData();
+        await loadBudgets(monthStart.getTime(), monthEnd.getTime());
+      })();
+    }, [loadInitialData, loadBudgets, monthStart, monthEnd]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -82,23 +84,9 @@ export default function BudgetsScreen() {
   );
   const monthOptions = getMonthOptions();
 
-  const budgetsWithProgress = useMemo(() => {
-    return budgets
-      .map((budget) => {
-        const category = categoryRepository.getById(budget.categoryId);
-        const spent = transactions
-          .filter(
-            (t) =>
-              t.categoryId === budget.categoryId &&
-              t.type === "expense" &&
-              t.date >= monthStart.getTime() &&
-              t.date <= monthEnd.getTime(),
-          )
-          .reduce((sum, t) => sum + t.amount, 0);
-        return { budget, category, spent };
-      })
-      .filter((item) => item.category);
-  }, [budgets, monthStart, monthEnd, transactions]);
+  // Données dérivées : le "spent" est calculé par le store pour la période
+  // sélectionnée, donc les écrans ne lisent plus les repositories.
+  const budgetsWithProgress = budgetItems.filter((item) => item.category);
 
   const handleOpenCreate = () => {
     haptics.impact(haptics.ImpactFeedbackStyle.Light);
@@ -146,7 +134,6 @@ export default function BudgetsScreen() {
   };
 
   const validateForm = () => {
-    console.log("validate amount:", formData.amount, typeof formData.amount);
     const newErrors: Record<string, string> = {};
     if (!formData.categoryId) newErrors.category = "Sélectionnez une catégorie";
     if (formData.amount <= 0)
@@ -369,7 +356,6 @@ export default function BudgetsScreen() {
             label="Montant mensuel"
             value={formData.amount}
             onChange={(value) => {
-              console.log("onChange amount:", value, typeof value);
               setFormData((prev) => ({ ...prev, amount: value }));
             }}
             placeholder="0,00"
@@ -403,20 +389,24 @@ export default function BudgetsScreen() {
             </ThemedText>
           )}
 
-          <View className="flex-row gap-3 mt-4">
-            <Button
-              title="Annuler"
-              onPress={() => setShowModal(false)}
-              variant="ghost"
-              fullWidth
-            />
-            <Button
-              title={editingBudget ? "Enregistrer" : "Créer"}
-              onPress={handleSubmit}
-              variant="primary"
-              loading={isLoading}
-              fullWidth
-            />
+          <View style={styles.actions}>
+            <View style={styles.actionCell}>
+              <Button
+                title="Annuler"
+                onPress={() => setShowModal(false)}
+                variant="ghost"
+                fullWidth
+              />
+            </View>
+            <View style={styles.actionCell}>
+              <Button
+                title={editingBudget ? "Enregistrer" : "Créer"}
+                onPress={handleSubmit}
+                variant="primary"
+                loading={isLoading}
+                fullWidth
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -595,5 +585,14 @@ const styles = StyleSheet.create({
   },
   submitError: {
     textAlign: "center",
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  actionCell: {
+    flex: 1,
   },
 });

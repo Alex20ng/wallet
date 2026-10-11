@@ -5,32 +5,27 @@ import {
 } from "@/components/charts";
 import { EmptyState, Screen, TransactionItem } from "@/components/layout";
 import { ThemedText, ThemedView } from "@/components/ui";
+import CategoryLegend from "@/components/ui/categoryLegend";
 import { borderRadius, gradients, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  budgetRepository,
-  categoryRepository,
-  transactionRepository,
-} from "@/repositories";
 import {
   formatCurrency,
   formatDate,
   getPeriodPresets,
   type PeriodPreset,
 } from "@/services/currency";
-import { endOfMonth, startOfMonth } from "@/services/date";
 import { useAppStore } from "@/store/useAppStore";
 import { FlashList } from "@shopify/flash-list";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   ArrowDownRight,
   ArrowUpRight,
   ChevronRight,
   PiggyBank,
 } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 const SHORT_PERIOD_LABELS: Record<PeriodPreset, string> = {
@@ -44,12 +39,10 @@ const SHORT_PERIOD_LABELS: Record<PeriodPreset, string> = {
 export default function DashboardScreen() {
   const {
     loadInitialData,
-    loadDashboardStats,
-    loadTransactions,
-    loadBudgets,
+    refreshData,
     dashboardStats,
     transactions,
-    currentPeriodRange,
+    monthBudgetItems,
     selectedPeriod,
     setPeriod,
     isLoading,
@@ -235,20 +228,18 @@ export default function DashboardScreen() {
     [colors],
   );
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialData();
+    }, [loadInitialData]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await haptics.impact(haptics.ImpactFeedbackStyle.Light);
-    await Promise.all([
-      loadDashboardStats(),
-      loadTransactions(),
-      loadBudgets(),
-    ]);
+    await refreshData();
     setRefreshing(false);
-  }, [loadDashboardStats, loadTransactions, loadBudgets]);
+  }, [refreshData]);
 
   const handlePeriodChange = (preset: PeriodPreset) => {
     haptics.impact(haptics.ImpactFeedbackStyle.Light);
@@ -285,26 +276,6 @@ export default function DashboardScreen() {
     expense: d.expense,
     date: d.date,
   }));
-
-  const currentMonthStart = startOfMonth(new Date(currentPeriodRange.start));
-  const currentMonthEnd = endOfMonth(new Date(currentPeriodRange.end));
-  const monthlyBudgets = budgetRepository.getAll(
-    currentMonthStart.getTime(),
-    currentMonthEnd.getTime(),
-  );
-
-  const budgetItems = monthlyBudgets.map((budget) => {
-    const category = categoryRepository.getById(budget.categoryId);
-    const spent = transactionRepository
-      .getAll({
-        startDate: currentMonthStart.getTime(),
-        endDate: currentMonthEnd.getTime(),
-        type: "expense",
-        categoryIds: [budget.categoryId],
-      })
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { budget, category, spent };
-  });
 
   const recentTransactions = transactions.slice(0, 5);
   const today = new Date();
@@ -444,10 +415,11 @@ export default function DashboardScreen() {
             Dépenses par catégorie
           </ThemedText>
         </View>
+
         <CategoryPieChart
           data={pieChartData}
           size={170}
-          showLegend={pieChartData.length > 0}
+          showLegend={false}
           centerContent={
             <View style={styles.pieCenter}>
               <ThemedText variant="caption" color="tertiary">
@@ -459,25 +431,30 @@ export default function DashboardScreen() {
             </View>
           }
         />
+
+        <View style={{ marginTop: 20 }}>
+          <CategoryLegend data={pieChartData} />
+        </View>
       </ThemedView>
 
       {/* Évolution */}
-      <ThemedView variant="surface" style={styles.chartCard}>
-        <ThemedText variant="subtitle" weight="bold" style={styles.chartTitle}>
-          Évolution
-        </ThemedText>
-        <ThemedText
-          variant="caption"
-          color="tertiary"
-          style={styles.chartSubtitle}
-        >
-          Revenus et dépenses de la période
-        </ThemedText>
-        <TrendChart data={trendData} height={170} />
-      </ThemedView>
+      <ThemedText variant="subtitle" weight="bold" style={styles.chartTitle}>
+        Évolution
+      </ThemedText>
+      <ThemedText
+        variant="caption"
+        color="tertiary"
+        style={styles.chartSubtitle}
+      >
+        Revenus et dépenses de la période
+      </ThemedText>
+
+      <View style={{ marginTop: 16 }}>
+        <TrendChart data={trendData} height={220} />
+      </View>
 
       {/* Budget Progress */}
-      {budgetItems.length > 0 && (
+      {monthBudgetItems.length > 0 && (
         <ThemedView variant="surface" style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <ThemedText
@@ -503,19 +480,21 @@ export default function DashboardScreen() {
               />
             </Pressable>
           </View>
-          {budgetItems
-            .slice(0, 3)
-            .map(({ budget, category, spent }) =>
-              category ? (
-                <BudgetProgress
-                  key={budget.id}
-                  spent={spent}
-                  budget={budget.amount}
-                  categoryName={category.name}
-                  categoryColor={category.color}
-                />
-              ) : null,
-            )}
+          <View style={{ gap: 20 }}>
+            {monthBudgetItems
+              .slice(0, 3)
+              .map(({ budget, category, spent }) =>
+                category ? (
+                  <BudgetProgress
+                    key={budget.id}
+                    spent={spent}
+                    budget={budget.amount}
+                    categoryName={category.name}
+                    categoryColor={category.color}
+                  />
+                ) : null,
+              )}
+          </View>
         </ThemedView>
       )}
 

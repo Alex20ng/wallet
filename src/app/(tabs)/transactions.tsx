@@ -4,13 +4,12 @@ import FloatingActionButton from "@/components/ui/floatingActionButton";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { categoryRepository } from "@/repositories";
 import { getPeriodPresets, type PeriodPreset } from "@/services/currency";
 import { useAppStore } from "@/store/useAppStore";
 import { FlashList } from "@shopify/flash-list";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { ListFilter, X } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   Platform,
   Pressable,
@@ -46,9 +45,11 @@ export default function TransactionsScreen() {
   const [showFilters, setShowFilters] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialData();
+    }, [loadInitialData]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -185,7 +186,7 @@ export default function TransactionsScreen() {
             />
           )}
           {selectedCategoryIds.map((id) => {
-            const cat = categoryRepository.getById(id);
+            const cat = categories.find((c) => c.id === id);
             return cat ? (
               <FilterChip
                 key={id}

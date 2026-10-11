@@ -2,19 +2,17 @@ import { memo, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
-  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/use-theme";
 import { formatCurrency } from "../../services/currency";
-import { ThemedText, ThemedView } from "../ui";
+import { ThemedText } from "../ui";
 
 interface BudgetProgressProps {
-  spent: number;
-  budget: number;
+  spent: number; // centimes
+  budget: number; // centimes
   categoryName: string;
   categoryColor: string;
   showAmount?: boolean;
@@ -31,129 +29,169 @@ export const BudgetProgress = memo(function BudgetProgress({
 }: BudgetProgressProps) {
   const colors = useTheme();
   const progress = useSharedValue(0);
-  const percentage = budget > 0 ? Math.min(spent / budget, 1) : 0;
-  const isOverBudget = spent > budget;
-  const isNearLimit = percentage >= 0.8 && !isOverBudget;
 
-  useEffect(() => {
-    progress.value = withTiming(percentage, {
-      duration: animate ? 800 : 0,
-      easing: Easing.out(Easing.quad),
-    });
-  }, [percentage, animate, progress]);
+  const ratio = budget > 0 ? spent / budget : spent > 0 ? 1 : 0;
+  const barRatio = Math.min(ratio, 1);
+  const isOverBudget = spent > budget;
+  const isNearLimit = ratio >= 0.8 && !isOverBudget;
 
   const progressColor = isOverBudget
     ? colors.error
     : isNearLimit
       ? colors.warning
       : categoryColor;
-  const bgColor = progressColor + "20";
 
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: `${interpolate(progress.value, [0, 1], [0, 100])}%`,
-    backgroundColor: progressColor,
+  useEffect(() => {
+    progress.value = withTiming(barRatio, {
+      duration: animate ? 800 : 0,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [barRatio, animate, progress]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
   }));
 
   return (
-    <ThemedView variant="surface" style={styles.container}>
+    <View style={styles.container}>
+      {/* Ligne 1 : catégorie + pourcentage (le nom rétrécit, jamais le reste) */}
       <View style={styles.header}>
         <View style={styles.categoryInfo}>
-          <ThemedView style={styles.categoryDot} variant="secondary">
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: categoryColor + "22" },
+            ]}
+          >
             <View style={[styles.dot, { backgroundColor: categoryColor }]} />
-          </ThemedView>
+          </View>
           <ThemedText
             variant="body"
-            weight="medium"
+            weight="semibold"
             color="primary"
+            numberOfLines={1}
             style={styles.categoryName}
           >
             {categoryName}
           </ThemedText>
         </View>
-        {showAmount && (
-          <ThemedText
-            variant="body"
-            weight="semibold"
-            color={isOverBudget ? "error" : isNearLimit ? "warning" : "primary"}
-            style={styles.amount}
-          >
-            {spent > 0 ? formatCurrency(spent) : "—"} / {formatCurrency(budget)}
-          </ThemedText>
-        )}
-      </View>
-      <View style={styles.progressContainer}>
-        <Animated.View
-          style={[styles.progressTrack, { backgroundColor: bgColor }]}
-        >
-          <Animated.View style={[styles.progressFill, animatedProgressStyle]} />
-        </Animated.View>
-      </View>
-      {isOverBudget && (
-        <ThemedText variant="caption" color="error" style={styles.warningText}>
-          Dépassement de {formatCurrency(spent - budget)}
-        </ThemedText>
-      )}
-      {isNearLimit && !isOverBudget && (
+
         <ThemedText
           variant="caption"
-          color="warning"
-          style={styles.warningText}
+          weight="bold"
+          style={{ color: progressColor }}
         >
-          Attention: {Math.round(percentage * 100)}% du budget utilisé
+          {Math.round(ratio * 100)}%
+        </ThemedText>
+      </View>
+
+      {/* Ligne 2 : barre */}
+      <View
+        style={[styles.track, { backgroundColor: colors.backgroundTertiary }]}
+      >
+        <Animated.View
+          style={[styles.fill, { backgroundColor: progressColor }, fillStyle]}
+        />
+      </View>
+
+      {/* Ligne 3 : montants, sur la largeur disponible, sans débordement */}
+      {showAmount && (
+        <View style={styles.amounts}>
+          <ThemedText
+            variant="caption"
+            weight="bold"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[
+              styles.spent,
+              { color: isOverBudget ? colors.error : colors.textPrimary },
+            ]}
+          >
+            {spent > 0 ? formatCurrency(spent) : "—"}
+          </ThemedText>
+          <ThemedText
+            variant="caption"
+            color="tertiary"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={styles.total}
+          >
+            {`sur ${formatCurrency(budget)}`}
+          </ThemedText>
+        </View>
+      )}
+
+      {isOverBudget && (
+        <ThemedText variant="caption" color="error" numberOfLines={2}>
+          {`Dépassement de ${formatCurrency(spent - budget)}`}
         </ThemedText>
       )}
-    </ThemedView>
+      {isNearLimit && (
+        <ThemedText variant="caption" color="warning" numberOfLines={2}>
+          {`Attention : ${Math.round(ratio * 100)}% du budget utilisé`}
+        </ThemedText>
+      )}
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.sm,
+    gap: 8,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
   },
   categoryInfo: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 10,
   },
-  categoryDot: {
+  iconCircle: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
   dot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   categoryName: {
     flex: 1,
   },
-  amount: {
-    fontVariant: ["tabular-nums"],
-    minWidth: 80,
-    textAlign: "right",
-  },
-  progressContainer: {
+  track: {
     height: 8,
-  },
-  progressTrack: {
-    flex: 1,
     borderRadius: 4,
     overflow: "hidden",
   },
-  progressFill: {
+  fill: {
     height: "100%",
     borderRadius: 4,
   },
-  warningText: {
-    marginTop: spacing.xs,
+  amounts: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  spent: {
+    flexShrink: 1,
+    fontVariant: ["tabular-nums"],
+  },
+  total: {
+    flexShrink: 1,
+    textAlign: "right",
+    fontVariant: ["tabular-nums"],
   },
 });
 

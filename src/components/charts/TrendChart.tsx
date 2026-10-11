@@ -1,29 +1,35 @@
 import { memo, useMemo, useState } from "react";
-import { View, type LayoutChangeEvent } from "react-native";
+import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { useTheme } from "../../hooks/use-theme";
 import { formatCurrency } from "../../services/currency";
-import { ThemedText, ThemedView } from "../ui";
+import { ThemedText } from "../ui";
 
 interface TrendDataPoint {
   label: string;
-  income: number; // en centimes
-  expense: number; // en centimes
+  income: number; // centimes
+  expense: number; // centimes
   date: string;
 }
 
 interface TrendChartProps {
   data: TrendDataPoint[];
+  /** Hauteur totale du composant, étiquettes de l'axe X comprises */
   height?: number;
   showIncome?: boolean;
   showExpense?: boolean;
+  showLegend?: boolean;
   animate?: boolean;
 }
 
-const Y_LABEL_WIDTH = 44;
-const INITIAL_SPACING = 12;
-const END_SPACING = 12;
+const Y_LABEL_WIDTH = 42;
+const X_LABELS_HEIGHT = 30;
+const OVERFLOW_TOP = 8;
+const OVERFLOW_BOTTOM = 14; // évite de couper le bas des courbes
+const INITIAL_SPACING = 10;
+const END_SPACING = 10;
 const TOOLTIP_WIDTH = 170;
+const MAX_VISIBLE_X_LABELS = 6;
 
 // 125000 centimes -> "1,3k"
 function formatAxis(cents: number) {
@@ -37,18 +43,21 @@ function formatAxis(cents: number) {
   return String(Math.round(units));
 }
 
+type Point = { value: number; label: string; fullLabel: string };
+
 export const TrendChart = memo(function TrendChart({
   data,
   height = 220,
   showIncome = true,
   showExpense = true,
+  showLegend = true,
   animate = true,
 }: TrendChartProps) {
   const colors = useTheme();
   const [width, setWidth] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) =>
-    setWidth(e.nativeEvent.layout.width);
+    setWidth(Math.floor(e.nativeEvent.layout.width));
 
   const maxValue = useMemo(() => {
     const max = Math.max(
@@ -60,64 +69,75 @@ export const TrendChart = memo(function TrendChart({
     return max * 1.15;
   }, [data, showIncome, showExpense]);
 
-  if (data.length === 0) {
+  // Évite des étiquettes qui se chevauchent quand il y a beaucoup de points
+  const labelStep = Math.max(1, Math.ceil(data.length / MAX_VISIBLE_X_LABELS));
+
+  const series = useMemo(() => {
+    const toPoints = (key: "income" | "expense"): Point[] =>
+      data.map((d, i) => ({
+        value: d[key],
+        label: i % labelStep === 0 ? d.label : "",
+        fullLabel: d.label,
+      }));
+
+    return [
+      showIncome && {
+        key: "income" as const,
+        name: "Revenus",
+        color: colors.success,
+        points: toPoints("income"),
+      },
+      showExpense && {
+        key: "expense" as const,
+        name: "Dépenses",
+        color: colors.error,
+        points: toPoints("expense"),
+      },
+    ].filter(Boolean) as {
+      key: "income" | "expense";
+      name: string;
+      color: string;
+      points: Point[];
+    }[];
+  }, [data, labelStep, showIncome, showExpense, colors.success, colors.error]);
+
+  if (data.length === 0 || series.length === 0) {
     return (
-      <ThemedView
-        variant="surface"
-        className="items-center justify-center rounded-3xl border-[0.5px] border-gray-500/20"
-        style={{ height }}
-      >
+      <View style={[styles.empty, { height }]}>
         <ThemedText variant="body" color="tertiary">
           Aucune donnée
         </ThemedText>
-      </ThemedView>
+      </View>
     );
   }
 
-  // Séries affichées (la première devient `data`, la seconde `data2`)
-  const series = [
-    showIncome && {
-      key: "income" as const,
-      name: "Revenus",
-      color: colors.success,
-      points: data.map((d) => ({ value: d.income, label: d.label })),
-    },
-    showExpense && {
-      key: "expense" as const,
-      name: "Dépenses",
-      color: colors.error,
-      points: data.map((d) => ({ value: d.expense, label: d.label })),
-    },
-  ].filter(Boolean) as {
-    key: "income" | "expense";
-    name: string;
-    color: string;
-    points: { value: number; label: string }[];
-  }[];
-
   const [first, second] = series;
 
-  const chartWidth = Math.max(width - Y_LABEL_WIDTH - 8, 0);
+  const chartWidth = Math.max(width - Y_LABEL_WIDTH - 12, 0);
+  const plotHeight = Math.max(
+    height - X_LABELS_HEIGHT - OVERFLOW_TOP - OVERFLOW_BOTTOM,
+    80,
+  );
   const pointSpacing =
     data.length > 1
       ? Math.max(
           (chartWidth - INITIAL_SPACING - END_SPACING) / (data.length - 1),
-          24,
+          20,
         )
       : 0;
 
   return (
-    <ThemedView
-      variant="surface"
-      className="rounded-3xl border-[0.5px] border-gray-500/20 p-5"
-    >
-      <View onLayout={onLayout} style={{ height }}>
-        {chartWidth > 0 && first && (
+    <View style={styles.container}>
+      <View onLayout={onLayout} style={styles.chartWrapper}>
+        {chartWidth > 0 && (
           <LineChart
             data={first.points}
             data2={second?.points}
             width={chartWidth}
-            height={height - 40}
+            height={plotHeight}
+            overflowTop={OVERFLOW_TOP}
+            overflowBottom={OVERFLOW_BOTTOM}
+            xAxisLabelsHeight={X_LABELS_HEIGHT - 6}
             maxValue={maxValue}
             noOfSections={4}
             spacing={pointSpacing}
@@ -125,7 +145,7 @@ export const TrendChart = memo(function TrendChart({
             endSpacing={END_SPACING}
             // Courbes
             curved
-            curvature={0.2}
+            curvature={0.12}
             thickness={3}
             thickness2={3}
             color={first.color}
@@ -140,7 +160,6 @@ export const TrendChart = memo(function TrendChart({
             endFillColor2={second?.color}
             startOpacity2={0.22}
             endOpacity2={0.02}
-            // Points masqués, visibles via le tooltip
             hideDataPoints
             // Axes et grille discrets
             yAxisThickness={0}
@@ -155,7 +174,6 @@ export const TrendChart = memo(function TrendChart({
             rulesColor={colors.border}
             rulesThickness={0.6}
             backgroundColor="transparent"
-            // Animation
             isAnimated={animate}
             animationDuration={animate ? 900 : 0}
             // Tooltip au toucher
@@ -170,34 +188,34 @@ export const TrendChart = memo(function TrendChart({
               pointerLabelHeight: 80,
               activatePointersOnLongPress: false,
               autoAdjustPointerLabelPosition: true,
-              pointerLabelComponent: (
-                items: { value: number; label?: string }[],
-              ) => (
+              pointerLabelComponent: (items: Partial<Point>[]) => (
                 <View
-                  className="gap-1 rounded-2xl px-3 py-2"
-                  style={{
-                    backgroundColor: colors.textPrimary,
-                    width: TOOLTIP_WIDTH,
-                  }}
+                  style={[
+                    styles.tooltip,
+                    { backgroundColor: colors.textPrimary },
+                  ]}
                 >
                   <ThemedText
                     variant="caption"
                     weight="bold"
                     style={{ color: colors.surface }}
                   >
-                    {items[0]?.label}
+                    {items[0]?.fullLabel ?? items[0]?.label}
                   </ThemedText>
                   {items.map((item, i) => (
-                    <View key={i} className="flex-row items-center gap-1.5">
+                    <View key={i} style={styles.tooltipRow}>
                       <View
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: series[i]?.color }}
+                        style={[
+                          styles.tooltipDot,
+                          { backgroundColor: series[i]?.color },
+                        ]}
                       />
                       <ThemedText
                         variant="caption"
+                        numberOfLines={1}
                         style={{ color: colors.surface }}
                       >
-                        {series[i]?.name} : {formatCurrency(item.value)}
+                        {series[i]?.name} : {formatCurrency(item.value ?? 0)}
                       </ThemedText>
                     </View>
                   ))}
@@ -207,8 +225,68 @@ export const TrendChart = memo(function TrendChart({
           />
         )}
       </View>
-    </ThemedView>
+
+      {showLegend && (
+        <View style={styles.legend}>
+          {series.map((s) => (
+            <View key={s.key} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: s.color }]} />
+              <ThemedText variant="caption" color="secondary">
+                {s.name}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
   );
+});
+
+const styles = StyleSheet.create({
+  container: {
+    width: "100%",
+    gap: 12,
+  },
+  chartWrapper: {
+    width: "100%",
+    overflow: "hidden",
+  },
+  empty: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tooltip: {
+    width: TOOLTIP_WIDTH,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  tooltipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tooltipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 20,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
 });
 
 export default TrendChart;

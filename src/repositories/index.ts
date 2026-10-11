@@ -244,6 +244,21 @@ export const transactionRepository = {
     return result.changes > 0;
   },
 
+  getExpenseTotalsByCategory(startDate: number, endDate: number): { categoryId: string; amount: number }[] {
+    const db = getDatabase();
+    const rows = asRows(db.getAllSync(
+      `SELECT category_id, SUM(amount) as amount
+       FROM transactions
+       WHERE type = 'expense' AND date >= ? AND date <= ?
+       GROUP BY category_id`,
+      [startDate, endDate]
+    ));
+    return rows.map((row) => ({
+      categoryId: row.category_id as string,
+      amount: row.amount as number,
+    }));
+  },
+
   getDashboardStats(startDate: number, endDate: number): DashboardStats {
     const db = getDatabase();
 
