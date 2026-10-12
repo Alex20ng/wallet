@@ -6,6 +6,7 @@ import {
 } from "@/constants/category-icons";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import { useAppStore } from "@/store/useAppStore";
 import { router, useLocalSearchParams } from "expo-router";
 import { Check } from "lucide-react-native";
@@ -29,6 +30,7 @@ const UNIQUE_COLORS = Array.from(new Set(CATEGORY_COLORS));
 export default function CategoryFormSheet() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { categories, addCategory, updateCategory, deleteCategory, isLoading } =
     useAppStore();
 
@@ -44,9 +46,9 @@ export default function CategoryFormSheet() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Le nom est requis";
-    if (!formData.icon) newErrors.icon = "Sélectionnez une icône";
-    if (!formData.color) newErrors.color = "Sélectionnez une couleur";
+    if (!formData.name.trim()) newErrors.name = t("validation.nameRequired");
+    if (!formData.icon) newErrors.icon = t("validation.selectIcon");
+    if (!formData.color) newErrors.color = t("validation.selectColor");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -69,19 +71,19 @@ export default function CategoryFormSheet() {
       router.back();
     } catch {
       await haptics.notification(haptics.NotificationFeedbackType.Error);
-      setErrors({ submit: "Erreur lors de la sauvegarde" });
+      setErrors({ submit: t("errors.save") });
     }
   };
 
   const handleDelete = () => {
     if (!editing) return;
     Alert.alert(
-      "Supprimer la catégorie",
-      `Voulez-vous supprimer « ${editing.name} » ? Les transactions associées ne seront pas supprimées.`,
+      t("categories.deleteTitle"),
+      t("categories.deleteMessage", { name: editing.name }),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Supprimer",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             await haptics.impact(haptics.ImpactFeedbackStyle.Heavy);
@@ -114,16 +116,16 @@ export default function CategoryFormSheet() {
         showsVerticalScrollIndicator={false}
       >
         <ThemedText variant="subtitle" weight="bold" className="mb-2">
-          {editing ? "Modifier la catégorie" : "Nouvelle catégorie"}
+          {editing ? t("categories.editTitle") : t("categories.newTitle")}
         </ThemedText>
 
         <Input
-          label="Nom"
+          label={t("common.name")}
           value={formData.name}
           onChangeText={(text) =>
             setFormData((prev) => ({ ...prev, name: text }))
           }
-          placeholder="Ex: Courses, Transport..."
+          placeholder={t("categories.namePlaceholder")}
           error={errors.name}
           required
           autoCapitalize="words"
@@ -135,7 +137,7 @@ export default function CategoryFormSheet() {
           color="secondary"
           className="mb-2 mt-4"
         >
-          Type
+          {t("common.type")}
         </ThemedText>
         <Select
           value={formData.type}
@@ -143,11 +145,11 @@ export default function CategoryFormSheet() {
             setFormData((prev) => ({ ...prev, type: value as CategoryType }))
           }
           options={[
-            { value: "expense", label: "Dépense" },
-            { value: "income", label: "Revenu" },
-            { value: "both", label: "Les deux" },
+            { value: "expense", label: t("common.expense") },
+            { value: "income", label: t("common.income") },
+            { value: "both", label: t("common.both") },
           ]}
-          placeholder="Type de transaction"
+          placeholder={t("categories.typePlaceholder")}
         />
 
         <ThemedText
@@ -156,7 +158,7 @@ export default function CategoryFormSheet() {
           color="secondary"
           className="mb-2 mt-4"
         >
-          Icône
+          {t("common.icon")}
         </ThemedText>
         <IconPicker
           selectedIcon={formData.icon}
@@ -169,7 +171,7 @@ export default function CategoryFormSheet() {
           color="secondary"
           className="mb-2 mt-4"
         >
-          Couleur
+          {t("common.color")}
         </ThemedText>
         <ColorPicker
           selectedColor={formData.color}
@@ -194,10 +196,14 @@ export default function CategoryFormSheet() {
       >
         <View className="flex-1">
           {editing ? (
-            <Button title="Supprimer" variant="danger" onPress={handleDelete} />
+            <Button
+              title={t("common.delete")}
+              variant="danger"
+              onPress={handleDelete}
+            />
           ) : (
             <Button
-              title="Annuler"
+              title={t("common.cancel")}
               variant="ghost"
               onPress={() => router.back()}
             />
@@ -205,7 +211,7 @@ export default function CategoryFormSheet() {
         </View>
         <View className="flex-1">
           <Button
-            title={editing ? "Enregistrer" : "Créer"}
+            title={editing ? t("common.save") : t("common.create")}
             variant="primary"
             onPress={handleSubmit}
             loading={isLoading}
@@ -224,6 +230,7 @@ function IconPicker({
   onSelect: (icon: string) => void;
 }) {
   const colors = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View className="flex-row flex-wrap gap-2">
@@ -238,7 +245,7 @@ function IconPicker({
             onPress={() => onSelect(name)}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            accessibilityLabel={`Icône ${name}`}
+            accessibilityLabel={t("common.iconLabel", { name })}
             className="h-[52px] w-[52px] items-center justify-center rounded-2xl border-[1.5px]"
             style={{
               backgroundColor: selected
@@ -267,6 +274,7 @@ function ColorPicker({
   onSelect: (color: string) => void;
 }) {
   const colors = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View className="flex-row flex-wrap gap-2">
@@ -279,7 +287,7 @@ function ColorPicker({
             onPress={() => onSelect(color)}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            accessibilityLabel={`Couleur ${color}`}
+            accessibilityLabel={t("common.colorLabel", { color })}
             className={`h-11 w-11 items-center justify-center rounded-full ${
               selected ? "scale-110" : ""
             }`}

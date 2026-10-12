@@ -4,7 +4,8 @@ import { getCategoryIcon } from "@/constants/category-icons";
 import { borderRadius, gradients, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { formatCurrency, formatDate } from "@/services/currency";
+import { useTranslation } from "@/i18n";
+import { useFormatCurrency, useFormatDate } from "@/services/currency";
 import { useAppStore } from "@/store/useAppStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -15,6 +16,9 @@ import { Alert, Pressable, StyleSheet, View } from "react-native";
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
+  const formatDate = useFormatDate();
 
   const { deleteTransaction, transactions, categories, initialized } =
     useAppStore();
@@ -45,11 +49,15 @@ export default function TransactionDetailScreen() {
   // Alerte système : Liquid Glass sur iOS 26, boîte de dialogue Material sur Android
   const confirmDelete = () => {
     Alert.alert(
-      "Supprimer la transaction",
-      "Cette action est irréversible. La transaction sera supprimée définitivement.",
+      t("transaction.deleteTitle"),
+      t("transaction.deleteMessageDetail"),
       [
-        { text: "Annuler", style: "cancel" },
-        { text: "Supprimer", style: "destructive", onPress: handleDelete },
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: handleDelete,
+        },
       ],
       { cancelable: true },
     );
@@ -58,9 +66,9 @@ export default function TransactionDetailScreen() {
   if (!transaction) {
     return (
       <Screen safeAreaEdges={["top", "bottom"]}>
-        <PageHeader title="Transaction" onBack={() => router.back()} />
+        <PageHeader title={t("transaction.title")} onBack={() => router.back()} />
         <ThemedText variant="body" color="tertiary" style={styles.loading}>
-          Chargement...
+          {t("common.loading")}
         </ThemedText>
       </Screen>
     );
@@ -78,8 +86,8 @@ export default function TransactionDetailScreen() {
   return (
     <Screen>
       <PageHeader
-        title="Transaction"
-        subtitle={isExpense ? "Dépense" : "Revenu"}
+        title={t("transaction.title")}
+        subtitle={isExpense ? t("common.expense") : t("common.income")}
         onBack={() => router.back()}
         rightAction={
           <Pressable
@@ -89,7 +97,7 @@ export default function TransactionDetailScreen() {
               { backgroundColor: colors.primaryLight },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Modifier la transaction"
+            accessibilityLabel={t("transaction.edit")}
             hitSlop={8}
           >
             <Pencil size={18} strokeWidth={2.3} color={colors.primary} />
@@ -110,7 +118,7 @@ export default function TransactionDetailScreen() {
             weight="bold"
             style={styles.heroBadgeText}
           >
-            {isExpense ? "DÉPENSE" : "REVENU"}
+            {isExpense ? t("common.expense").toUpperCase() : t("common.income").toUpperCase()}
           </ThemedText>
         </View>
         <ThemedText style={styles.heroAmount}>
@@ -119,7 +127,7 @@ export default function TransactionDetailScreen() {
         </ThemedText>
         <HeroCategoryPill
           icon={category?.icon}
-          name={category?.name || "Catégorie inconnue"}
+          name={category?.name || t("common.unknownCategory")}
         />
       </LinearGradient>
 
@@ -127,7 +135,7 @@ export default function TransactionDetailScreen() {
       <ThemedView variant="surface" style={styles.detailsCard}>
         <DetailRow
           icon={<Calendar size={17} strokeWidth={2.3} color={colors.primary} />}
-          label="Date"
+          label={t("common.date")}
           value={formatDate(transaction.date, {
             weekday: "long",
             day: "numeric",
@@ -140,22 +148,26 @@ export default function TransactionDetailScreen() {
             icon={
               <FileText size={17} strokeWidth={2.3} color={colors.primary} />
             }
-            label="Note"
+            label={t("common.note")}
             value={transaction.note}
           />
         ) : null}
         <DetailRow
           icon={<Tag size={17} strokeWidth={2.3} color={colors.primary} />}
-          label="Catégorie"
+          label={t("common.category")}
           value={
             category
-              ? `${category.name} · ${category.type === "income" ? "Revenu" : category.type === "both" ? "Dépense & revenu" : "Dépense"}`
-              : "Inconnue"
+              ? `${category.name} · ${category.type === "income"
+                  ? t("common.income")
+                  : category.type === "both"
+                    ? t("common.both")
+                    : t("common.expense")}`
+              : t("common.unknown")
           }
         />
         <DetailRow
           icon={<Clock size={17} strokeWidth={2.3} color={colors.primary} />}
-          label="Créée le"
+          label={t("transaction.createdAt")}
           value={formatDate(transaction.createdAt, {
             day: "2-digit",
             month: "2-digit",
@@ -168,7 +180,7 @@ export default function TransactionDetailScreen() {
         {transaction.updatedAt !== transaction.createdAt && (
           <DetailRow
             icon={<Clock size={17} strokeWidth={2.3} color={colors.warning} />}
-            label="Modifiée le"
+            label={t("transaction.updatedAt")}
             value={formatDate(transaction.updatedAt, {
               day: "2-digit",
               month: "2-digit",
@@ -184,14 +196,14 @@ export default function TransactionDetailScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         <Button
-          title="Modifier"
+          title={t("transaction.edit")}
           onPress={handleEdit}
           variant="outline"
           size="md"
           fullWidth
         />
         <Button
-          title="Supprimer"
+          title={t("common.delete")}
           onPress={confirmDelete}
           variant="danger"
           size="md"

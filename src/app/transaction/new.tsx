@@ -10,6 +10,7 @@ import { useBudgetAlerts } from '@/hooks/alerts/useBudgetAlerts';
 import { type TransactionType } from '@/services/currency';
 import { spacing, borderRadius, shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useTranslation } from '@/i18n';
 
 import { DatePicker } from '@/components/forms';
 
@@ -17,6 +18,7 @@ export default function TransactionFormScreen() {
   const { id, type: initialType } = useLocalSearchParams<{ id?: string; type?: string }>();
   const isEditing = Boolean(id);
   const colors = useTheme();
+  const { t } = useTranslation();
 
   const {
     loadCategories,
@@ -62,11 +64,12 @@ export default function TransactionFormScreen() {
 
   const validate = useCallback(() => {
     const newErrors: Record<string, string> = {};
-    if (amount <= 0) newErrors.amount = 'Le montant doit être supérieur à 0';
-    if (!activeCategoryId) newErrors.category = 'Sélectionnez une catégorie';
+    if (amount <= 0) newErrors.amount = t('validation.amountPositive');
+    if (!activeCategoryId)
+      newErrors.category = t('validation.selectCategory');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [amount, activeCategoryId]);
+  }, [amount, activeCategoryId, t]);
 
   const handleSubmit = async () => {
     if (!validate()) {
@@ -107,7 +110,7 @@ export default function TransactionFormScreen() {
       router.back();
     } catch {
       await haptics.notification(haptics.NotificationFeedbackType.Error);
-      setErrors({ submit: 'Erreur lors de la sauvegarde' });
+      setErrors({ submit: t('errors.save') });
     }
   };
 
@@ -115,12 +118,12 @@ export default function TransactionFormScreen() {
     if (!isEditing || !id) return;
 
     Alert.alert(
-      'Supprimer la transaction',
-      'Cette action est irréversible. Voulez-vous continuer ?',
+      t('transaction.deleteTitle'),
+      t('transaction.deleteMessage'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await haptics.impact(haptics.ImpactFeedbackStyle.Heavy);
@@ -142,8 +145,8 @@ export default function TransactionFormScreen() {
   return (
     <Screen>
       <PageHeader
-        title={isEditing ? 'Modifier' : 'Nouvelle transaction'}
-        subtitle={isExpense ? 'Ajouter une dépense' : 'Ajouter un revenu'}
+        title={isEditing ? t('transaction.editTitle') : t('transaction.newTitle')}
+        subtitle={isExpense ? t('transaction.addExpense') : t('transaction.addIncome')}
         onBack={() => router.back()}
         rightAction={
           isEditing ? (
@@ -151,17 +154,21 @@ export default function TransactionFormScreen() {
               onPress={() => {
                 haptics.impact(haptics.ImpactFeedbackStyle.Medium);
                 Alert.alert(
-                  'Supprimer la transaction',
-                  'Cette action est irréversible. Voulez-vous continuer ?',
+                  t('transaction.deleteTitle'),
+                  t('transaction.deleteMessage'),
                   [
-                    { text: 'Annuler', style: 'cancel' },
-                    { text: 'Supprimer', style: 'destructive', onPress: handleDelete },
+                    { text: t('common.cancel'), style: 'cancel' },
+                    {
+                      text: t('common.delete'),
+                      style: 'destructive',
+                      onPress: handleDelete,
+                    },
                   ],
                 );
               }}
               style={[styles.headerAction, { backgroundColor: colors.errorLight }]}
               accessibilityRole="button"
-              accessibilityLabel="Supprimer la transaction"
+              accessibilityLabel={t('transaction.deleteTitle')}
               hitSlop={8}
             >
               <Trash size={18} strokeWidth={2.3} color={colors.error} />
@@ -173,16 +180,16 @@ export default function TransactionFormScreen() {
       <ThemedView variant="surface" style={styles.formCard}>
         {/* Segmented type selector */}
         <View style={[styles.segmented, { backgroundColor: colors.backgroundSecondary }]}>
-          {(['expense', 'income'] as TransactionType[]).map(t => {
-            const active = type === t;
-            const activeColor = t === 'expense' ? colors.error : colors.success;
-            const Icon = t === 'expense' ? ArrowDownRight : ArrowUpRight;
+          {(['expense', 'income'] as TransactionType[]).map((option) => {
+            const active = type === option;
+            const activeColor = option === 'expense' ? colors.error : colors.success;
+            const Icon = option === 'expense' ? ArrowDownRight : ArrowUpRight;
             return (
               <Pressable
-                key={t}
+                key={option}
                 onPress={() => {
                   haptics.impact(haptics.ImpactFeedbackStyle.Light);
-                  setType(t);
+                  setType(option);
                 }}
                 style={[
                   styles.segment,
@@ -194,14 +201,14 @@ export default function TransactionFormScreen() {
                 <Icon
                   size={16}
                   strokeWidth={2.6}
-                  color={active ? '#FFFFFF' : t === 'expense' ? colors.error : colors.success}
+                  color={active ? '#FFFFFF' : option === 'expense' ? colors.error : colors.success}
                 />
                 <ThemedText
                   variant="body"
                   weight={active ? 'bold' : 'semibold'}
-                  color={active ? 'inverse' : t === 'expense' ? 'error' : 'success'}
+                  color={active ? 'inverse' : option === 'expense' ? 'error' : 'success'}
                 >
-                  {t === 'expense' ? 'Dépense' : 'Revenu'}
+                  {option === 'expense' ? t('common.expense') : t('common.income')}
                 </ThemedText>
               </Pressable>
             );
@@ -210,10 +217,10 @@ export default function TransactionFormScreen() {
 
         {/* Amount Input */}
         <NumberInput
-          label="Montant"
+          label={t('common.amount')}
           value={amount}
           onChange={setAmount}
-          placeholder="0,00"
+          placeholder={t('common.amountPlaceholder')}
           error={errors.amount}
           required
           showCurrency
@@ -222,7 +229,7 @@ export default function TransactionFormScreen() {
 
         {/* Category Selector */}
         <Select
-          label="Catégorie"
+          label={t('common.category')}
           value={activeCategoryId}
           onChange={setCategoryId}
           options={availableCategories.map(c => ({
@@ -230,7 +237,7 @@ export default function TransactionFormScreen() {
             label: c.name,
             color: c.color,
           }))}
-          placeholder="Choisir une catégorie"
+          placeholder={t('common.chooseCategory')}
           error={errors.category}
           required
           testID="category-select"
@@ -238,7 +245,7 @@ export default function TransactionFormScreen() {
 
         {/* Date Picker */}
         <DatePicker
-          label="Date"
+          label={t('common.date')}
           value={date}
           onChange={setDate}
           maxDate={new Date()}
@@ -247,10 +254,10 @@ export default function TransactionFormScreen() {
 
         {/* Note Input */}
         <Input
-          label="Note (optionnel)"
+          label={t('transaction.noteOptional')}
           value={note}
           onChangeText={setNote}
-          placeholder="Ajouter une note..."
+          placeholder={t('transaction.notePlaceholder')}
           multiline
           numberOfLines={3}
           testID="note-input"
@@ -266,7 +273,13 @@ export default function TransactionFormScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         <Button
-          title={isLoading ? 'Enregistrement...' : isEditing ? 'Enregistrer' : isExpense ? 'Ajouter la dépense' : 'Ajouter le revenu'}
+          title={isLoading
+            ? t('common.saving')
+            : isEditing
+              ? t('common.save')
+              : isExpense
+                ? t('transaction.addExpense')
+                : t('transaction.addIncome')}
           onPress={handleSubmit}
           variant="primary"
           size="lg"
@@ -276,7 +289,7 @@ export default function TransactionFormScreen() {
         />
         {isEditing && (
           <Button
-            title="Supprimer"
+            title={t('common.delete')}
             onPress={handleDelete}
             variant="danger"
             size="md"

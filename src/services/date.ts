@@ -1,4 +1,7 @@
+import { useCallback } from 'react';
 import type { PeriodPreset } from '../types';
+import { getCurrentLocale, translate } from '../i18n';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export function startOfDay(date: Date = new Date()): Date {
   const d = new Date(date);
@@ -87,21 +90,30 @@ export function formatRelativeDate(date: Date): string {
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return "Aujourd'hui";
-  if (diffDays === 1) return 'Hier';
-  if (diffDays < 7) return `Il y a ${diffDays} jours`;
-  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
-  if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
-  return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+  if (diffDays === 0) return translate("date.today");
+  if (diffDays === 1) return translate("date.yesterday");
+  if (diffDays < 7) return translate("date.daysAgo", { count: diffDays });
+  const weeks = Math.floor(diffDays / 7);
+  if (diffDays < 30) {
+    return translate(weeks === 1 ? "date.weekAgo" : "date.weeksAgo", {
+      count: weeks,
+    });
+  }
+  const months = Math.floor(diffDays / 30);
+  if (diffDays < 365) return translate("date.monthsAgo", { count: months });
+  const years = Math.floor(diffDays / 365);
+  return translate(years === 1 ? "date.yearAgo" : "date.yearsAgo", {
+    count: years,
+  });
 }
 
 export function getPeriodPresets(): { value: PeriodPreset; label: string }[] {
   return [
-    { value: 'today', label: "Aujourd'hui" },
-    { value: 'week', label: 'Cette semaine' },
-    { value: 'month', label: 'Ce mois' },
-    { value: 'year', label: "Cette année" },
-    { value: 'custom', label: 'Personnalisée' },
+    { value: 'today', label: translate("period.today") },
+    { value: 'week', label: translate("period.week") },
+    { value: 'month', label: translate("period.month") },
+    { value: 'year', label: translate("period.year") },
+    { value: 'custom', label: translate("period.custom") },
   ];
 }
 
@@ -112,10 +124,33 @@ export function getMonthOptions(): { value: string; label: string }[] {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     options.push({
       value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
-      label: new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(date),
+      label: new Intl.DateTimeFormat(getCurrentLocale(), { month: 'long', year: 'numeric' }).format(date),
     });
   }
   return options;
+}
+
+/**
+ * Variantes réactives (hooks) des helpers ci-dessus. Leur identité change avec
+ * la langue, ce qui force React Compiler à recalculer les valeurs mémoïsées
+ * (ces fonctions lisent le store implicitement, dépendance invisible pour lui).
+ */
+export function usePeriodPresets() {
+  const language = useSettingsStore((state) => state.language);
+  return useCallback(
+    () => getPeriodPresets(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépendance volontaire : invalide la mémoïsation à chaque changement de langue
+    [language],
+  );
+}
+
+export function useMonthOptions() {
+  const language = useSettingsStore((state) => state.language);
+  return useCallback(
+    () => getMonthOptions(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépendance volontaire : invalide la mémoïsation à chaque changement de langue
+    [language],
+  );
 }
 
 export function parseDateInput(input: string): Date | null {

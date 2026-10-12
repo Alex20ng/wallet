@@ -1,4 +1,5 @@
 import { haptics } from "@/hooks/use-haptics";
+import { translate } from "@/i18n";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
@@ -49,8 +50,8 @@ export class NotificationService {
         await Notifications.setNotificationChannelAsync(
           NOTIFICATION_CHANNEL_ID,
           {
-            name: "Alertes budgétaires",
-            description: "Notifications d'alerte pour vos budgets",
+            name: translate("notifications.channelName"),
+            description: translate("notifications.channelDescription"),
             importance: Notifications.AndroidImportance.HIGH,
             sound: "default",
             showBadge: false,
@@ -113,8 +114,8 @@ export class NotificationService {
       await Notifications.scheduleNotificationAsync({
         identifier: DAILY_REMINDER_ID,
         content: {
-          title: "Enregistrez vos dépenses",
-          body: "Avez-vous eu des dépenses aujourd'hui ? Enregistrez-les en 5 secondes.",
+          title: translate("notifications.dailyTitle"),
+          body: translate("notifications.dailyBody"),
           sound: "default",
           data: {
             type: "daily-reminder",

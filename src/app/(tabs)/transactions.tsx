@@ -4,7 +4,11 @@ import FloatingActionButton from "@/components/ui/floatingActionButton";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { getPeriodPresets, type PeriodPreset } from "@/services/currency";
+import { useTranslation } from "@/i18n";
+import {
+  usePeriodPresets,
+  usePeriodShortLabel,
+} from "@/services/currency";
 import { useAppStore } from "@/store/useAppStore";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect } from "expo-router";
@@ -17,14 +21,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-
-const SHORT_PERIOD_LABELS: Record<PeriodPreset, string> = {
-  today: "Jour",
-  week: "Semaine",
-  month: "Mois",
-  year: "Année",
-  custom: "Perso",
-};
 
 export default function TransactionsScreen() {
   const {
@@ -42,6 +38,9 @@ export default function TransactionsScreen() {
   } = useAppStore();
 
   const colors = useTheme();
+  const { t, tp } = useTranslation();
+  const getPeriodPresets = usePeriodPresets();
+  const getPeriodShortLabel = usePeriodShortLabel();
   const [showFilters, setShowFilters] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -68,9 +67,9 @@ export default function TransactionsScreen() {
   );
 
   const filterOptions = [
-    { value: "all", label: "Toutes" },
-    { value: "expense", label: "Dépenses" },
-    { value: "income", label: "Revenus" },
+    { value: "all", label: t("transactions.filterAll") },
+    { value: "expense", label: t("common.expenses") },
+    { value: "income", label: t("common.incomes") },
   ];
 
   const hasActiveFilters =
@@ -95,10 +94,10 @@ export default function TransactionsScreen() {
             color="tertiary"
             style={styles.pageDate}
           >
-            {transactions.length} opération{transactions.length > 1 ? "s" : ""}
+            {tp("transactions.count", transactions.length)}
           </ThemedText>
           <ThemedText variant="headline" weight="bold">
-            Transactions
+            {t("transactions.title")}
           </ThemedText>
         </View>
         <Pressable
@@ -121,7 +120,9 @@ export default function TransactionsScreen() {
           ]}
           accessibilityRole="button"
           accessibilityLabel={
-            hasActiveFilters ? "Effacer les filtres" : "Ouvrir les filtres"
+            hasActiveFilters
+              ? t("transactions.clearFilters")
+              : t("transactions.openFilters")
           }
         >
           <ListFilter
@@ -166,7 +167,7 @@ export default function TransactionsScreen() {
                 weight={active ? "bold" : "medium"}
                 color={active ? "inverse" : "secondary"}
               >
-                {SHORT_PERIOD_LABELS[preset.value]}
+                {getPeriodShortLabel(preset.value)}
               </ThemedText>
             </Pressable>
           );
@@ -178,7 +179,11 @@ export default function TransactionsScreen() {
         <View style={styles.activeFilters}>
           {filterType !== "all" && (
             <FilterChip
-              label={filterType === "expense" ? "Dépenses" : "Revenus"}
+              label={
+                filterType === "expense"
+                  ? t("common.expenses")
+                  : t("common.incomes")
+              }
               onRemove={() => {
                 haptics.impact(haptics.ImpactFeedbackStyle.Light);
                 setFilterType("all");
@@ -207,7 +212,7 @@ export default function TransactionsScreen() {
         visible={showFilters}
         onClose={() => setShowFilters(false)}
         size="lg"
-        title="Filtres"
+        title={t("transactions.filters")}
       >
         <View style={styles.filterContent}>
           <ThemedText
@@ -216,7 +221,7 @@ export default function TransactionsScreen() {
             color="tertiary"
             style={styles.filterSectionTitle}
           >
-            TYPE
+            {t("transactions.filterTypeLabel")}
           </ThemedText>
           <Select
             value={filterType}
@@ -224,7 +229,7 @@ export default function TransactionsScreen() {
               setFilterType(value as "all" | "expense" | "income")
             }
             options={filterOptions}
-            placeholder="Tous les types"
+            placeholder={t("transactions.allTypes")}
           />
 
           <ThemedText
@@ -233,7 +238,7 @@ export default function TransactionsScreen() {
             color="tertiary"
             style={styles.filterSectionTitle}
           >
-            CATÉGORIES DÉPENSES
+            {t("transactions.expenseCategories")}
           </ThemedText>
           <CategoryFilterChips
             categories={expenseCategories}
@@ -247,7 +252,7 @@ export default function TransactionsScreen() {
             color="tertiary"
             style={styles.filterSectionTitle}
           >
-            CATÉGORIES REVENUS
+            {t("transactions.incomeCategories")}
           </ThemedText>
           <CategoryFilterChips
             categories={incomeCategories}
@@ -261,16 +266,16 @@ export default function TransactionsScreen() {
       {transactions.length === 0 ? (
         <ThemedView variant="surface" style={styles.emptyCard}>
           <EmptyState
-            title="Aucune transaction"
+            title={t("transactions.emptyTitle")}
             message={
               hasActiveFilters
-                ? "Aucune transaction ne correspond à vos filtres"
-                : "Commencez par ajouter une transaction"
+                ? t("transactions.noMatchFilters")
+                : t("transactions.emptyMessage")
             }
             actionLabel={
               hasActiveFilters
-                ? "Effacer les filtres"
-                : "Ajouter une transaction"
+                ? t("transactions.clearFilters")
+                : t("transactions.addTransaction")
             }
             onAction={
               hasActiveFilters
@@ -325,6 +330,7 @@ function FilterChip({
   onRemove: () => void;
 }) {
   const themeColors = useTheme();
+  const { t } = useTranslation();
   return (
     <View
       style={[
@@ -343,7 +349,7 @@ function FilterChip({
       <Pressable
         onPress={onRemove}
         style={styles.filterChipRemove}
-        accessibilityLabel={`Retirer ${label}`}
+        accessibilityLabel={t("common.removeLabel", { label })}
         hitSlop={6}
       >
         <X

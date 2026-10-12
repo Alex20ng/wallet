@@ -1,4 +1,5 @@
 import { gradients } from "@/constants/theme";
+import { useTranslation } from "@/i18n";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
@@ -10,11 +11,12 @@ const SIZE = 58;
 export default function FloatingActionButton() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Pressable
       onPress={() => router.push("/transaction/new?type=expense")}
-      accessibilityLabel="Ajouter une transaction"
+      accessibilityLabel={t("transactions.addTransaction")}
       accessibilityRole="button"
       className="items-center justify-center rounded-full bg-emerald-500 active:scale-95"
       style={[

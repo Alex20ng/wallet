@@ -1,4 +1,5 @@
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import NativeSlider from "@react-native-community/slider";
 import { View } from "react-native";
 import ThemedText from "./themed-text";
@@ -9,14 +10,17 @@ export function Slider({
   minimumValue,
   maximumValue,
   step,
+  accessibilityLabel,
 }: {
   value: number;
   onValueChange: (v: number) => void;
   minimumValue: number;
   maximumValue: number;
   step: number;
+  accessibilityLabel?: string;
 }) {
   const colors = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View>
@@ -30,7 +34,7 @@ export function Slider({
         maximumTrackTintColor={colors.backgroundTertiary}
         thumbTintColor={colors.primary}
         style={{ height: 40 }}
-        accessibilityLabel="Seuil d'alerte"
+        accessibilityLabel={accessibilityLabel ?? t("settings.warningThreshold")}
       />
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <ThemedText variant="caption" color="tertiary">

@@ -2,7 +2,8 @@ import { memo, useMemo, useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { useTheme } from "../../hooks/use-theme";
-import { formatCurrency } from "../../services/currency";
+import { useTranslation } from "../../i18n";
+import { useFormatCurrency } from "../../services/currency";
 import { ThemedText } from "../ui";
 
 interface TrendDataPoint {
@@ -31,16 +32,13 @@ const END_SPACING = 10;
 const TOOLTIP_WIDTH = 170;
 const MAX_VISIBLE_X_LABELS = 6;
 
-// 125000 centimes -> "1,3k"
-function formatAxis(cents: number) {
+// 125000 centimes -> "1,3k" (localisé)
+function formatAxis(cents: number, locale: string) {
   const units = cents / 100;
-  if (units >= 1_000_000) {
-    return `${(units / 1_000_000).toFixed(1).replace(".", ",")}M`;
-  }
-  if (units >= 1_000) {
-    return `${(units / 1_000).toFixed(units >= 10_000 ? 0 : 1).replace(".", ",")}k`;
-  }
-  return String(Math.round(units));
+  return new Intl.NumberFormat(locale, {
+    notation: "compact",
+    maximumFractionDigits: units >= 10_000 ? 0 : 1,
+  }).format(units);
 }
 
 type Point = { value: number; label: string; fullLabel: string };
@@ -54,6 +52,8 @@ export const TrendChart = memo(function TrendChart({
   animate = true,
 }: TrendChartProps) {
   const colors = useTheme();
+  const { t, locale } = useTranslation();
+  const formatCurrency = useFormatCurrency();
   const [width, setWidth] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) =>
@@ -83,13 +83,13 @@ export const TrendChart = memo(function TrendChart({
     return [
       showIncome && {
         key: "income" as const,
-        name: "Revenus",
+        name: t("common.incomes"),
         color: colors.success,
         points: toPoints("income"),
       },
       showExpense && {
         key: "expense" as const,
-        name: "Dépenses",
+        name: t("common.expenses"),
         color: colors.error,
         points: toPoints("expense"),
       },
@@ -99,13 +99,13 @@ export const TrendChart = memo(function TrendChart({
       color: string;
       points: Point[];
     }[];
-  }, [data, labelStep, showIncome, showExpense, colors.success, colors.error]);
+  }, [data, labelStep, showIncome, showExpense, colors.success, colors.error, t]);
 
   if (data.length === 0 || series.length === 0) {
     return (
       <View style={[styles.empty, { height }]}>
         <ThemedText variant="body" color="tertiary">
-          Aucune donnée
+          {t("common.noData")}
         </ThemedText>
       </View>
     );
@@ -167,7 +167,7 @@ export const TrendChart = memo(function TrendChart({
             yAxisLabelWidth={Y_LABEL_WIDTH}
             yAxisTextStyle={{ color: colors.textTertiary, fontSize: 10 }}
             xAxisLabelTextStyle={{ color: colors.textTertiary, fontSize: 10 }}
-            formatYLabel={(label) => formatAxis(Number(label))}
+            formatYLabel={(label) => formatAxis(Number(label), locale)}
             rulesType="dashed"
             dashWidth={4}
             dashGap={6}

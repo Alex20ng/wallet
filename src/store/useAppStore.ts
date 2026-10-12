@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TransactionType, PeriodPreset, PeriodRange, FilterOptions, Category, Transaction, Budget, TransactionWithCategory } from '../types';
+import { translate } from '../i18n';
 import { getPeriodRange } from '../services/currency';
 import { endOfMonth, startOfMonth } from '../services/date';
 import { categoryRepository, transactionRepository, budgetRepository } from '../repositories';
@@ -150,7 +151,7 @@ export const useAppStore = create<AppState>()(
           await get().refreshData();
           set({ initialized: true });
         } catch {
-          set({ error: 'Erreur lors du chargement des données' });
+          set({ error: translate('errors.loadData') });
         } finally {
           if (firstLoad) set({ isLoading: false });
         }
@@ -244,7 +245,7 @@ export const useAppStore = create<AppState>()(
           await get().refreshData();
           return created;
         } catch (error) {
-          set({ error: 'Erreur lors de la création de la transaction' });
+          set({ error: translate('errors.createTransaction') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -260,7 +261,7 @@ export const useAppStore = create<AppState>()(
           }
           return updated;
         } catch (error) {
-          set({ error: 'Erreur lors de la modification de la transaction' });
+          set({ error: translate('errors.updateTransaction') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -276,7 +277,7 @@ export const useAppStore = create<AppState>()(
           }
           return result;
         } catch (error) {
-          set({ error: 'Erreur lors de la suppression de la transaction' });
+          set({ error: translate('errors.deleteTransaction') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -290,7 +291,7 @@ export const useAppStore = create<AppState>()(
           await get().refreshData();
           return created;
         } catch (error) {
-          set({ error: 'Erreur lors de la création de la catégorie' });
+          set({ error: translate('errors.createCategory') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -306,7 +307,7 @@ export const useAppStore = create<AppState>()(
           }
           return updated;
         } catch (error) {
-          set({ error: 'Erreur lors de la modification de la catégorie' });
+          set({ error: translate('errors.updateCategory') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -322,7 +323,7 @@ export const useAppStore = create<AppState>()(
           }
           return result;
         } catch (error) {
-          set({ error: 'Erreur lors de la suppression de la catégorie' });
+          set({ error: translate('errors.deleteCategory') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -337,7 +338,7 @@ export const useAppStore = create<AppState>()(
           await get().refreshData();
           return created;
         } catch (error) {
-          set({ error: 'Erreur lors de la sauvegarde du budget' });
+          set({ error: translate('errors.saveBudget') });
           throw error;
         } finally {
           set({ isLoading: false });
@@ -357,7 +358,7 @@ export const useAppStore = create<AppState>()(
           }
           return result;
         } catch (error) {
-          set({ error: 'Erreur lors de la suppression du budget' });
+          set({ error: translate('errors.deleteBudget') });
           throw error;
         } finally {
           set({ isLoading: false });

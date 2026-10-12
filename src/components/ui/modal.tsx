@@ -24,6 +24,7 @@ import {
   spacing,
 } from "../../constants/theme";
 import { useTheme } from "../../hooks/use-theme";
+import { useTranslation } from "../../i18n";
 import { ThemedText } from "./themed-text";
 import { ThemedView } from "./themed-view";
 
@@ -56,6 +57,7 @@ function Modal({
   testID,
 }: ModalProps) {
   const colors = useTheme();
+  const { t } = useTranslation();
   const overlayOpacity = useSharedValue(0);
   const translateY = useSharedValue(40);
 
@@ -132,7 +134,7 @@ function Modal({
             <Pressable
               onPress={closeOnOverlayPress ? onClose : undefined}
               style={StyleSheet.absoluteFill}
-              accessibilityLabel="Fermer"
+              accessibilityLabel={t("common.close")}
             />
             <ThemedView
               variant="surface"
@@ -164,7 +166,7 @@ function Modal({
                       { backgroundColor: colors.backgroundSecondary },
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel="Fermer"
+                    accessibilityLabel={t("common.close")}
                     hitSlop={8}
                   >
                     <X

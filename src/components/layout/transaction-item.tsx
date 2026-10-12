@@ -2,9 +2,10 @@ import React, { memo } from 'react';
 import { Pressable, StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../../hooks/use-theme';
+import { useTranslation } from '../../i18n';
 import { ThemedText } from '../ui';
 import { spacing, borderRadius, typography } from '../../constants/theme';
-import { formatCurrency, formatDate } from '../../services/currency';
+import { useFormatCurrency, useFormatDate } from '../../services/currency';
 import { getCategoryIcon } from '../../constants/category-icons';
 import type { TransactionWithCategory } from '../../types';
 
@@ -24,6 +25,9 @@ export const TransactionItem = memo(function TransactionItem({
   testID,
 }: TransactionItemProps) {
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
+  const formatDate = useFormatDate();
   const isExpense = transaction.type === 'expense';
   const pressScale = useSharedValue(1);
 
@@ -53,7 +57,7 @@ export const TransactionItem = memo(function TransactionItem({
         onLongPress={onLongPress}
         style={[styles.container, style]}
         accessibilityRole="button"
-        accessibilityLabel={`${category?.name ?? 'Transaction'}, ${amountPrefix}${formatCurrency(transaction.amount, { showSign: false })}, ${formatDate(transaction.date)}`}
+        accessibilityLabel={`${category?.name ?? t('common.transaction')}, ${amountPrefix}${formatCurrency(transaction.amount, { showSign: false })}, ${formatDate(transaction.date)}`}
         testID={testID}
         android_ripple={{ color: colors.primary + '14' }}
       >
@@ -68,7 +72,7 @@ export const TransactionItem = memo(function TransactionItem({
 
         <View style={styles.details}>
           <ThemedText variant="body" weight="semibold" color="primary" numberOfLines={1}>
-            {category?.name || 'Sans catégorie'}
+            {category?.name || t('common.noCategory')}
           </ThemedText>
           <View style={styles.meta}>
             <ThemedText variant="caption" color="tertiary" style={styles.dateText}>

@@ -4,6 +4,7 @@ import { ChevronDown, Check } from 'lucide-react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useTheme } from '../../hooks/use-theme';
 import { spacing, borderRadius, animation } from '../../constants/theme';
+import { useTranslation } from '../../i18n';
 import { ThemedText, Modal } from '../ui';
 
 import Input from '../ui/input';
@@ -35,7 +36,7 @@ const Select = forwardRef<ComponentRef<typeof Pressable>, SelectProps>(
     value,
     onChange,
     options,
-    placeholder = 'Sélectionner',
+    placeholder,
     label,
     error,
     disabled = false,
@@ -46,6 +47,8 @@ const Select = forwardRef<ComponentRef<typeof Pressable>, SelectProps>(
     style,
   }, ref) => {
     const colors = useTheme();
+    const { t } = useTranslation();
+    const resolvedPlaceholder = placeholder ?? t('common.select');
     const [isOpen, setIsOpen] = React.useState(false);
     const [searchText, setSearchText] = React.useState('');
     const scale = useSharedValue(1);
@@ -119,7 +122,7 @@ const Select = forwardRef<ComponentRef<typeof Pressable>, SelectProps>(
                 style={styles.selectText}
                 numberOfLines={1}
               >
-                {value ? selectedOption?.label : placeholder}
+                {value ? selectedOption?.label : resolvedPlaceholder}
               </ThemedText>
               <View style={styles.chevron}>
                 <ChevronDown
@@ -147,7 +150,7 @@ const Select = forwardRef<ComponentRef<typeof Pressable>, SelectProps>(
         >
           {searchable && (
             <Input
-              placeholder="Rechercher..."
+              placeholder={t('common.search')}
               value={searchText}
               onChangeText={setSearchText}
               style={styles.searchInput}
@@ -182,7 +185,7 @@ const Select = forwardRef<ComponentRef<typeof Pressable>, SelectProps>(
             ))}
             {filteredOptions.length === 0 && (
               <ThemedText variant="body" color="tertiary" style={styles.noResults}>
-                Aucun résultat
+                {t('common.noResults')}
               </ThemedText>
             )}
           </View>

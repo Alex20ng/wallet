@@ -6,6 +6,7 @@ import { ThemedText, ThemedView } from "@/components/ui";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import { useAppStore } from "@/store/useAppStore";
 import type { Category } from "@/types";
 import { useFocusEffect } from "expo-router";
@@ -16,6 +17,7 @@ import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 export default function CategoriesScreen() {
   const { loadCategories, loadInitialData, categories } = useAppStore();
   const colors = useTheme();
+  const { t, tp } = useTranslation();
   const sheetRef = React.useRef<CategoryFormSheetRef>(null);
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -72,17 +74,17 @@ export default function CategoriesScreen() {
             color="tertiary"
             style={styles.pageDate}
           >
-            {categories.length} catégor{categories.length > 1 ? "ies" : "ie"}
+            {tp("categories.count", categories.length)}
           </ThemedText>
           <ThemedText variant="headline" weight="bold">
-            Catégories
+            {t("categories.title")}
           </ThemedText>
         </View>
         <Pressable
           onPress={handleOpenCreate}
           style={[styles.addButton, { backgroundColor: colors.primary }]}
           accessibilityRole="button"
-          accessibilityLabel="Créer une catégorie"
+          accessibilityLabel={t("categories.create")}
         >
           <Plus size={22} strokeWidth={2.6} color="#FFFFFF" />
         </Pressable>
@@ -95,7 +97,7 @@ export default function CategoriesScreen() {
               style={[styles.sectionDot, { backgroundColor: colors.error }]}
             />
             <ThemedText variant="subtitle" weight="bold">
-              Dépenses
+              {t("common.expenses")}
             </ThemedText>
             <ThemedText variant="caption" color="tertiary">
               {expenseTotal}
@@ -119,7 +121,7 @@ export default function CategoriesScreen() {
               style={[styles.sectionDot, { backgroundColor: colors.success }]}
             />
             <ThemedText variant="subtitle" weight="bold">
-              Revenus
+              {t("common.incomes")}
             </ThemedText>
             <ThemedText variant="caption" color="tertiary">
               {incomeTotal}
@@ -139,9 +141,9 @@ export default function CategoriesScreen() {
       {isEmpty && (
         <ThemedView variant="surface" style={styles.emptyCard}>
           <EmptyState
-            title="Aucune catégorie"
-            message="Créez vos premières catégories pour organiser vos transactions"
-            actionLabel="Créer une catégorie"
+            title={t("categories.emptyTitle")}
+            message={t("categories.emptyMessage")}
+            actionLabel={t("categories.create")}
             onAction={handleOpenCreate}
           />
         </ThemedView>

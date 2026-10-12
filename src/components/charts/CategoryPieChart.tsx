@@ -1,9 +1,10 @@
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import React, { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
 import { spacing } from "../../constants/theme";
-import { formatCurrency } from "../../services/currency";
+import { useFormatCurrency } from "../../services/currency";
 import { ThemedText, ThemedView } from "../ui";
 
 interface PieChartData {
@@ -29,6 +30,8 @@ export const CategoryPieChart = memo(function CategoryPieChart({
   animate = true,
 }: CategoryPieChartProps) {
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
 
   if (data.length === 0) {
     return (
@@ -38,7 +41,7 @@ export const CategoryPieChart = memo(function CategoryPieChart({
       >
         <View style={styles.emptyState}>
           <ThemedText variant="body" color="tertiary" style={styles.emptyText}>
-            Aucune donnée
+            {t("common.noData")}
           </ThemedText>
         </View>
       </ThemedView>

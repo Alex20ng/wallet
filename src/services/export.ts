@@ -1,4 +1,5 @@
 import type { TransactionWithCategory, Category, Budget } from '../types';
+import { translate } from '../i18n';
 import { formatCurrency, formatDate } from './currency';
 
 export function exportToCSV(
@@ -10,15 +11,24 @@ export function exportToCSV(
   const budgetMap = new Map(budgets.map(b => [b.categoryId, b]));
 
   // Transactions CSV
-  const txnHeaders = ['Date', 'Type', 'Catégorie', 'Montant', 'Note', 'Budget', 'Dépensé', 'Restant'];
+  const txnHeaders = [
+    translate('export.colDate'),
+    translate('export.colType'),
+    translate('export.colCategory'),
+    translate('export.colAmount'),
+    translate('export.colNote'),
+    translate('export.colBudget'),
+    translate('export.colSpent'),
+    translate('export.colRemaining'),
+  ];
   const txnRows = transactions.map(t => {
     const cat = categoryMap.get(t.categoryId);
     const budget = budgetMap.get(t.categoryId);
     const spent = budget ? getSpentForCategory(transactions, t.categoryId, budget.periodStart, budget.periodEnd) : 0;
     return [
       formatDate(t.date),
-      t.type === 'income' ? 'Revenu' : 'Dépense',
-      cat?.name || 'Inconnue',
+      t.type === 'income' ? translate('common.income') : translate('common.expense'),
+      cat?.name || translate('common.unknown'),
       formatCurrency(t.amount, { showSign: true }),
       t.note || '',
       budget ? formatCurrency(budget.amount) : '',
@@ -28,12 +38,23 @@ export function exportToCSV(
   });
 
   // Categories CSV
-  const catHeaders = ['Nom', 'Type', 'Icône', 'Couleur', 'Budget mensuel', 'Seuil alerte'];
+  const catHeaders = [
+    translate('export.colName'),
+    translate('export.colType'),
+    translate('export.colIcon'),
+    translate('export.colColor'),
+    translate('export.colMonthlyBudget'),
+    translate('export.colAlertThreshold'),
+  ];
   const catRows = categories.map(c => {
     const budget = budgetMap.get(c.id);
     return [
       c.name,
-      c.type === 'expense' ? 'Dépense' : c.type === 'income' ? 'Revenu' : 'Les deux',
+      c.type === 'expense'
+        ? translate('common.expense')
+        : c.type === 'income'
+          ? translate('common.income')
+          : translate('common.both'),
       c.icon,
       c.color,
       budget ? formatCurrency(budget.amount) : '',
@@ -42,11 +63,17 @@ export function exportToCSV(
   });
 
   // Budgets CSV
-  const budHeaders = ['Catégorie', 'Montant', 'Période début', 'Période fin', 'Seuil alerte'];
+  const budHeaders = [
+    translate('export.colCategory'),
+    translate('export.colAmount'),
+    translate('export.colPeriodStart'),
+    translate('export.colPeriodEnd'),
+    translate('export.colAlertThreshold'),
+  ];
   const budRows = budgets.map(b => {
     const cat = categoryMap.get(b.categoryId);
     return [
-      cat?.name || 'Inconnue',
+      cat?.name || translate('common.unknown'),
       formatCurrency(b.amount),
       formatDate(b.periodStart),
       formatDate(b.periodEnd),
@@ -55,15 +82,15 @@ export function exportToCSV(
   });
 
   const sections = [
-    '=== TRANSACTIONS ===',
+    translate('export.sectionTransactions'),
     txnHeaders.join(','),
     ...txnRows,
     '',
-    '=== CATÉGORIES ===',
+    translate('export.sectionCategories'),
     catHeaders.join(','),
     ...catRows,
     '',
-    '=== BUDGETS ===',
+    translate('export.sectionBudgets'),
     budHeaders.join(','),
     ...budRows,
   ];

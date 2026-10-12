@@ -1,3 +1,4 @@
+import { translate } from "@/i18n";
 import { formatCurrency } from "@/services/currency";
 import { NotificationService } from "@/services/notifications/NotificationService";
 import {
@@ -31,7 +32,7 @@ export function useBudgetAlerts() {
       }
       const {
         categoryId,
-        categoryName = "catégorie",
+        categoryName = translate("notifications.defaultCategory"),
         budget,
         spent,
         periodStart,
@@ -50,7 +51,10 @@ export function useBudgetAlerts() {
           alertType: "exceeded",
         };
         if (!(await notificationPreferences.hasSentAlert(key))) {
-          const body = `Budget dépassé de ${formatCurrency(exceeded)} dans la catégorie ${categoryName}.`;
+          const body = translate("notifications.budgetExceededBody", {
+            amount: formatCurrency(exceeded),
+            category: categoryName,
+          });
           await NotificationService.sendBudgetAlert(
             {
               type: "budget-exceeded",
@@ -62,7 +66,7 @@ export function useBudgetAlerts() {
               periodStart,
               periodEnd,
             },
-            "Budget dépassé",
+            translate("notifications.budgetExceededTitle"),
             body,
           );
           await notificationPreferences.markAlertSent(key);
@@ -77,7 +81,9 @@ export function useBudgetAlerts() {
           alertType: "reached",
         };
         if (!(await notificationPreferences.hasSentAlert(key))) {
-          const body = `Vous avez atteint le plafond de votre budget ${categoryName}.`;
+          const body = translate("notifications.budgetReachedBody", {
+            category: categoryName,
+          });
           await NotificationService.sendBudgetAlert(
             {
               type: "budget-reached",
@@ -89,7 +95,7 @@ export function useBudgetAlerts() {
               periodStart,
               periodEnd,
             },
-            "Budget atteint",
+            translate("notifications.budgetReachedTitle"),
             body,
           );
           await notificationPreferences.markAlertSent(key);
@@ -104,7 +110,10 @@ export function useBudgetAlerts() {
           alertType: "warning",
         };
         if (!(await notificationPreferences.hasSentAlert(key))) {
-          const body = `Attention, vous avez consommé ${Math.round(ratio)}% de votre budget ${categoryName} ce mois-ci.`;
+          const body = translate("notifications.budgetWarningBody", {
+            percent: Math.round(ratio),
+            category: categoryName,
+          });
           await NotificationService.sendBudgetAlert(
             {
               type: "budget-warning",
@@ -116,7 +125,7 @@ export function useBudgetAlerts() {
               periodStart,
               periodEnd,
             },
-            "Alerte budgétaire",
+            translate("notifications.budgetWarningTitle"),
             body,
           );
           await notificationPreferences.markAlertSent(key);

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { ThemedView, ThemedText } from '../ui';
 import { useTheme } from '../../hooks/use-theme';
+import { useTranslation } from '../../i18n';
 import { spacing, shadows } from '../../constants/theme';
 
 interface ScreenProps {
@@ -112,6 +113,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, onBack, rightAction, style }: PageHeaderProps) {
   const colors = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.pageHeader, style]}>
@@ -120,7 +122,7 @@ export function PageHeader({ title, subtitle, onBack, rightAction, style }: Page
           onPress={onBack}
           style={[styles.backButton, { backgroundColor: colors.surface }]}
           accessibilityRole="button"
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
           hitSlop={8}
         >
           <ChevronLeft size={22} strokeWidth={2.4} color={colors.textPrimary} />

@@ -9,10 +9,12 @@ import CategoryLegend from "@/components/ui/categoryLegend";
 import { borderRadius, gradients, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import {
-  formatCurrency,
-  formatDate,
-  getPeriodPresets,
+  useFormatCurrency,
+  useFormatDate,
+  usePeriodPresets,
+  usePeriodShortLabel,
   type PeriodPreset,
 } from "@/services/currency";
 import { useAppStore } from "@/store/useAppStore";
@@ -28,14 +30,6 @@ import {
 import React, { useCallback, useMemo } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
-const SHORT_PERIOD_LABELS: Record<PeriodPreset, string> = {
-  today: "Jour",
-  week: "Semaine",
-  month: "Mois",
-  year: "Année",
-  custom: "Perso",
-};
-
 export default function DashboardScreen() {
   const {
     loadInitialData,
@@ -49,6 +43,11 @@ export default function DashboardScreen() {
   } = useAppStore();
 
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
+  const formatDate = useFormatDate();
+  const getPeriodPresets = usePeriodPresets();
+  const getPeriodShortLabel = usePeriodShortLabel();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const styles = useMemo(
@@ -253,7 +252,7 @@ export default function DashboardScreen() {
       <Screen>
         <View style={styles.loadingContainer}>
           <ThemedText variant="body" color="tertiary">
-            Chargement...
+            {t("common.loading")}
           </ThemedText>
         </View>
       </Screen>
@@ -302,7 +301,7 @@ export default function DashboardScreen() {
           })}
         </ThemedText>
         <ThemedText variant="headline" weight="bold">
-          Tableau de bord
+          {t("dashboard.title")}
         </ThemedText>
       </View>
 
@@ -315,7 +314,7 @@ export default function DashboardScreen() {
       >
         <View style={styles.heroTopRow}>
           <ThemedText style={styles.heroLabel}>
-            Solde · {periodLabel}
+            {t("dashboard.balancePeriod", { period: periodLabel })}
           </ThemedText>
         </View>
 
@@ -329,7 +328,9 @@ export default function DashboardScreen() {
               <ArrowUpRight size={17} strokeWidth={2.6} color="#A7F3D0" />
             </View>
             <View style={styles.heroStatText}>
-              <ThemedText style={styles.heroStatLabel}>Revenus</ThemedText>
+              <ThemedText style={styles.heroStatLabel}>
+                {t("common.incomes")}
+              </ThemedText>
               <ThemedText style={styles.heroStatValue}>
                 +{formatCurrency(totalIncome)}
               </ThemedText>
@@ -340,7 +341,9 @@ export default function DashboardScreen() {
               <ArrowDownRight size={17} strokeWidth={2.6} color="#FECDD3" />
             </View>
             <View style={styles.heroStatText}>
-              <ThemedText style={styles.heroStatLabel}>Dépenses</ThemedText>
+              <ThemedText style={styles.heroStatLabel}>
+                {t("common.expenses")}
+              </ThemedText>
               <ThemedText style={styles.heroStatValue}>
                 -{formatCurrency(totalExpense)}
               </ThemedText>
@@ -368,7 +371,7 @@ export default function DashboardScreen() {
                     active && styles.periodButtonTextActive,
                   ]}
                 >
-                  {SHORT_PERIOD_LABELS[preset.value]}
+                  {getPeriodShortLabel(preset.value)}
                 </ThemedText>
               </Pressable>
             );
@@ -379,7 +382,7 @@ export default function DashboardScreen() {
       {/* Quick actions */}
       <View style={styles.quickActions}>
         <QuickAction
-          label="Dépense"
+          label={t("common.expense")}
           icon={
             <ArrowDownRight size={20} strokeWidth={2.4} color={colors.error} />
           }
@@ -387,7 +390,7 @@ export default function DashboardScreen() {
           onPress={() => router.push("/transaction/new?type=expense")}
         />
         <QuickAction
-          label="Revenu"
+          label={t("common.income")}
           icon={
             <ArrowUpRight size={20} strokeWidth={2.4} color={colors.success} />
           }
@@ -395,7 +398,7 @@ export default function DashboardScreen() {
           onPress={() => router.push("/transaction/new?type=income")}
         />
         <QuickAction
-          label="Budget"
+          label={t("common.budget")}
           icon={
             <PiggyBank size={20} strokeWidth={2.4} color={colors.primary} />
           }
@@ -412,7 +415,7 @@ export default function DashboardScreen() {
             weight="bold"
             style={styles.sectionTitle}
           >
-            Dépenses par catégorie
+            {t("dashboard.expensesByCategory")}
           </ThemedText>
         </View>
 
@@ -423,7 +426,7 @@ export default function DashboardScreen() {
           centerContent={
             <View style={styles.pieCenter}>
               <ThemedText variant="caption" color="tertiary">
-                Total
+                {t("common.total")}
               </ThemedText>
               <ThemedText variant="body" weight="bold" color="primary">
                 {formatCurrency(totalExpense)}
@@ -439,14 +442,14 @@ export default function DashboardScreen() {
 
       {/* Évolution */}
       <ThemedText variant="subtitle" weight="bold" style={styles.chartTitle}>
-        Évolution
+        {t("dashboard.evolution")}
       </ThemedText>
       <ThemedText
         variant="caption"
         color="tertiary"
         style={styles.chartSubtitle}
       >
-        Revenus et dépenses de la période
+        {t("dashboard.evolutionSubtitle")}
       </ThemedText>
 
       <View style={{ marginTop: 16 }}>
@@ -462,16 +465,16 @@ export default function DashboardScreen() {
               weight="bold"
               style={styles.sectionTitle}
             >
-              Budgets du mois
+              {t("dashboard.monthBudgets")}
             </ThemedText>
             <Pressable
               onPress={() => router.push("/(tabs)/budgets")}
               style={styles.seeAll}
               accessibilityRole="button"
-              accessibilityLabel="Voir tous les budgets"
+              accessibilityLabel={t("dashboard.seeAllBudgets")}
             >
               <ThemedText variant="caption" weight="semibold" color="link">
-                Voir tout
+                {t("common.seeAll")}
               </ThemedText>
               <ChevronRight
                 size={14}
@@ -501,16 +504,16 @@ export default function DashboardScreen() {
       {/* Recent Transactions */}
       <View style={styles.sectionHeader}>
         <ThemedText variant="subtitle" weight="bold">
-          Transactions récentes
+          {t("dashboard.recentTransactions")}
         </ThemedText>
         <Pressable
           onPress={() => router.push("/(tabs)/transactions")}
           style={styles.seeAll}
           accessibilityRole="button"
-          accessibilityLabel="Voir toutes les transactions"
+          accessibilityLabel={t("dashboard.seeAllTransactions")}
         >
           <ThemedText variant="caption" weight="semibold" color="link">
-            Voir tout
+            {t("common.seeAll")}
           </ThemedText>
           <ChevronRight size={14} strokeWidth={2.4} color={colors.primary} />
         </Pressable>
@@ -519,9 +522,9 @@ export default function DashboardScreen() {
       {recentTransactions.length === 0 ? (
         <ThemedView variant="surface" style={styles.emptyCard}>
           <EmptyState
-            title="Aucune transaction"
-            message="Commencez par ajouter votre première dépense ou revenu"
-            actionLabel="Ajouter une transaction"
+            title={t("transactions.emptyTitle")}
+            message={t("dashboard.emptyMessage")}
+            actionLabel={t("transactions.addTransaction")}
             onAction={() => router.push("/transaction/new?type=expense")}
           />
         </ThemedView>

@@ -11,8 +11,9 @@ import {
 import { borderRadius, shadows, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { formatCurrency } from "@/services/currency";
-import { endOfMonth, getMonthOptions, startOfMonth } from "@/services/date";
+import { useTranslation } from "@/i18n";
+import { useFormatCurrency } from "@/services/currency";
+import { endOfMonth, startOfMonth, useMonthOptions } from "@/services/date";
 import { useAppStore } from "@/store/useAppStore";
 import type { Budget, Category } from "@/types";
 import NativeSlider from "@react-native-community/slider";
@@ -39,6 +40,9 @@ export default function BudgetsScreen() {
   } = useAppStore();
 
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
+  const getMonthOptions = useMonthOptions();
   const [selectedMonth, setSelectedMonth] = React.useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -113,10 +117,10 @@ export default function BudgetsScreen() {
   };
 
   const handleDelete = (budget: Budget) => {
-    Alert.alert("Supprimer le budget", "Voulez-vous supprimer ce budget ?", [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t("budgets.deleteTitle"), t("budgets.deleteMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Supprimer",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           await haptics.impact(haptics.ImpactFeedbackStyle.Heavy);
@@ -135,9 +139,10 @@ export default function BudgetsScreen() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.categoryId) newErrors.category = "Sélectionnez une catégorie";
+    if (!formData.categoryId)
+      newErrors.category = t("validation.selectCategory");
     if (formData.amount <= 0)
-      newErrors.amount = "Le montant doit être supérieur à 0";
+      newErrors.amount = t("validation.amountPositive");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -162,7 +167,7 @@ export default function BudgetsScreen() {
       setShowModal(false);
     } catch {
       await haptics.notification(haptics.NotificationFeedbackType.Error);
-      setErrors({ submit: "Erreur lors de la sauvegarde" });
+      setErrors({ submit: t("errors.saveBudget") });
     }
   };
 
@@ -199,14 +204,14 @@ export default function BudgetsScreen() {
             {selectedMonthLabel}
           </ThemedText>
           <ThemedText variant="headline" weight="bold">
-            Budgets
+            {t("budgets.title")}
           </ThemedText>
         </View>
         <Pressable
           onPress={handleOpenCreate}
           style={[styles.addButton, { backgroundColor: colors.primary }]}
           accessibilityRole="button"
-          accessibilityLabel="Créer un budget"
+          accessibilityLabel={t("budgets.create")}
         >
           <Plus size={22} strokeWidth={2.6} color="#FFFFFF" />
         </Pressable>
@@ -217,7 +222,7 @@ export default function BudgetsScreen() {
         value={selectedMonth}
         onChange={setSelectedMonth}
         options={monthOptions}
-        placeholder="Mois"
+        placeholder={t("common.month")}
         style={styles.monthSelect}
       />
 
@@ -229,7 +234,9 @@ export default function BudgetsScreen() {
         {/* Restant : l'information principale */}
         <View style={styles.summaryHero}>
           <ThemedText variant="caption" color="tertiary">
-            {remaining < 0 ? "Dépassement total" : "Restant à dépenser"}
+            {remaining < 0
+              ? t("budgets.over")
+              : t("budgets.remainingToSpend")}
           </ThemedText>
           <ThemedText
             variant="headline"
@@ -266,7 +273,7 @@ export default function BudgetsScreen() {
         <View style={[styles.summaryRow, { borderTopColor: colors.border }]}>
           <View style={styles.summaryCell}>
             <ThemedText variant="caption" color="tertiary">
-              Budget total
+              {t("budgets.totalBudget")}
             </ThemedText>
             <ThemedText
               variant="body"
@@ -285,7 +292,7 @@ export default function BudgetsScreen() {
           />
           <View style={[styles.summaryCell, styles.summaryCellRight]}>
             <ThemedText variant="caption" color="tertiary">
-              Dépensé
+              {t("budgets.spent")}
             </ThemedText>
             <ThemedText
               variant="body"
@@ -306,9 +313,9 @@ export default function BudgetsScreen() {
       {budgetsWithProgress.length === 0 ? (
         <ThemedView variant="surface" style={styles.emptyCard}>
           <EmptyState
-            title="Aucun budget"
-            message="Définissez des budgets pour vos catégories de dépenses"
-            actionLabel="Créer un budget"
+            title={t("budgets.emptyTitle")}
+            message={t("budgets.emptyMessage")}
+            actionLabel={t("budgets.create")}
             onAction={handleOpenCreate}
           />
         </ThemedView>
@@ -332,12 +339,12 @@ export default function BudgetsScreen() {
       <Modal
         visible={showModal}
         onClose={() => setShowModal(false)}
-        title={editingBudget ? "Modifier le budget" : "Nouveau budget"}
+        title={editingBudget ? t("budgets.editTitle") : t("budgets.newTitle")}
         size="md"
       >
         <View className="gap-4">
           <Select
-            label="Catégorie"
+            label={t("common.category")}
             value={formData.categoryId}
             onChange={(value) =>
               setFormData((prev) => ({ ...prev, categoryId: value }))
@@ -347,18 +354,18 @@ export default function BudgetsScreen() {
               label: c.name,
               color: c.color,
             }))}
-            placeholder="Choisir une catégorie"
+            placeholder={t("common.chooseCategory")}
             error={errors.category}
             required
           />
 
           <NumberInput
-            label="Montant mensuel"
+            label={t("budgets.monthlyAmount")}
             value={formData.amount}
             onChange={(value) => {
               setFormData((prev) => ({ ...prev, amount: value }));
             }}
-            placeholder="0,00"
+            placeholder={t("common.amountPlaceholder")}
             error={errors.amount}
             required
             showCurrency
@@ -366,7 +373,9 @@ export default function BudgetsScreen() {
 
           <View style={styles.thresholdContainer}>
             <ThemedText variant="caption" weight="medium" color="secondary">
-              {`Seuil d'alerte : ${Math.round(formData.alertThreshold * 100)}%`}
+              {t("budgets.alertThreshold", {
+                percent: Math.round(formData.alertThreshold * 100),
+              })}
             </ThemedText>
             <Slider
               value={formData.alertThreshold}
@@ -392,7 +401,7 @@ export default function BudgetsScreen() {
           <View style={styles.actions}>
             <View style={styles.actionCell}>
               <Button
-                title="Annuler"
+                title={t("common.cancel")}
                 onPress={() => setShowModal(false)}
                 variant="ghost"
                 fullWidth
@@ -400,7 +409,7 @@ export default function BudgetsScreen() {
             </View>
             <View style={styles.actionCell}>
               <Button
-                title={editingBudget ? "Enregistrer" : "Créer"}
+                title={editingBudget ? t("common.save") : t("common.create")}
                 onPress={handleSubmit}
                 variant="primary"
                 loading={isLoading}
@@ -428,6 +437,7 @@ function Slider({
   step: number;
 }) {
   const colors = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View>
@@ -441,7 +451,7 @@ function Slider({
         maximumTrackTintColor={colors.backgroundTertiary}
         thumbTintColor={colors.primary}
         style={{ height: 40 }}
-        accessibilityLabel="Seuil d'alerte"
+        accessibilityLabel={t("budgets.alertAt", { percent: 80 })}
       />
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <ThemedText variant="caption" color="tertiary">

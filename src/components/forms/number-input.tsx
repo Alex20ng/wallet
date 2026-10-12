@@ -4,8 +4,11 @@ import { Minus, Plus } from 'lucide-react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../../hooks/use-theme';
 import { spacing, borderRadius, typography } from '../../constants/theme';
+import { useTranslation } from '../../i18n';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { ThemedText } from '../ui';
-import { formatCurrency, parseCurrency, CURRENCY_CODE } from '../../services/currency';
+import { parseCurrency, useFormatCurrency } from '../../services/currency';
+import { getCurrency } from '../../constants/currencies';
 
 interface NumberInputProps {
   value: number; // in cents
@@ -30,7 +33,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
     value,
     onChange,
     label,
-    placeholder = '0,00',
+    placeholder,
     error,
     disabled = false,
     required = false,
@@ -38,17 +41,23 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
     max = 999999999,
     step = 100,
     showCurrency = true,
-    currency = CURRENCY_CODE,
+    currency,
     testID,
     accessibilityLabel,
     style,
   }, ref) => {
     const themeColors = useTheme();
-    const [inputValue, setInputValue] = useState(formatCurrency(value, { showSign: false }));
+    const { t } = useTranslation();
+    const formatCurrency = useFormatCurrency();
+    const settingsCurrencyCode = useSettingsStore((state) => state.currencyCode);
+    const resolvedCurrency = currency ?? settingsCurrencyCode;
+    const currencySymbol = getCurrency(resolvedCurrency).symbol;
+    const resolvedPlaceholder = placeholder ?? t('common.amountPlaceholder');
+    const [inputValue, setInputValue] = useState(formatCurrency(value, { showSign: false, hideSymbol: true }));
     const [isFocused, setIsFocused] = useState(false);
     const scale = useSharedValue(1);
 
-    const formattedValue = formatCurrency(value, { showSign: false });
+    const formattedValue = formatCurrency(value, { showSign: false, hideSymbol: true });
     const displayValue = isFocused ? inputValue : formattedValue;
 
     useEffect(() => {
@@ -79,7 +88,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
       const parsed = inputValue === '' ? 0 : parseCurrency(inputValue);
       const clamped = Math.max(min, Math.min(max, parsed));
       onChange(clamped);
-      setInputValue(formatCurrency(clamped, { showSign: false }));
+      setInputValue(formatCurrency(clamped, { showSign: false, hideSymbol: true }));
     };
 
     const handleFocus = () => {
@@ -90,13 +99,13 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
     const increment = () => {
       const newValue = Math.min(max, value + step);
       onChange(newValue);
-      setInputValue(formatCurrency(newValue, { showSign: false }));
+      setInputValue(formatCurrency(newValue, { showSign: false, hideSymbol: true }));
     };
 
     const decrement = () => {
       const newValue = Math.max(min, value - step);
       onChange(newValue);
-      setInputValue(formatCurrency(newValue, { showSign: false }));
+      setInputValue(formatCurrency(newValue, { showSign: false, hideSymbol: true }));
     };
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -142,7 +151,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
             <View style={styles.amountRow}>
               {showCurrency && (
                 <ThemedText variant="caption" weight="bold" color="tertiary" style={styles.currencySymbol}>
-                  {currency}
+                  {currencySymbol}
                 </ThemedText>
               )}
               <TextInput
@@ -155,7 +164,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                 keyboardType="decimal-pad"
                 autoComplete="off"
                 spellCheck={false}
-                placeholder={placeholder}
+                placeholder={resolvedPlaceholder}
                 placeholderTextColor={themeColors.textTertiary}
                 style={[
                   styles.input,
@@ -164,7 +173,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                     fontSize: typography.fontSize.xxl,
                   },
                 ]}
-                accessibilityLabel={accessibilityLabel || label}
+                  accessibilityLabel={accessibilityLabel || label || t('common.amount')}
                 accessibilityState={{ disabled }}
                 accessibilityValue={{ text: formattedValue }}
                 testID={testID}
@@ -177,7 +186,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                   onPressIn={handlePressIn}
                   onPressOut={handlePressOut}
                   disabled={value <= min}
-                  accessibilityLabel="Diminuer"
+                  accessibilityLabel={t('common.decrease')}
                   accessibilityRole="button"
                   style={[
                     styles.stepperButton,
@@ -193,7 +202,7 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                   onPressIn={handlePressIn}
                   onPressOut={handlePressOut}
                   disabled={value >= max}
-                  accessibilityLabel="Augmenter"
+                  accessibilityLabel={t('common.increase')}
                   accessibilityRole="button"
                   style={[
                     styles.stepperButton,

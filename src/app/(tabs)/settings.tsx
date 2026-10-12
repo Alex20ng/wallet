@@ -1,11 +1,15 @@
 import { Screen } from "@/components/layout";
 import { Switch, ThemedText, ThemedView } from "@/components/ui";
+import Select from "@/components/forms/select";
+import { CURRENCIES } from "@/constants/currencies";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
+import { useTranslation } from "@/i18n";
+import { LANGUAGES } from "@/i18n/translations";
+import { haptics } from "@/hooks/use-haptics";
 import { setThemePreference } from "@/hooks/theme-preference";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { CURRENCY_CODE, CURRENCY_LOCALE } from "@/services/currency";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { NotificationService } from "@/services/notifications/NotificationService";
 import { notificationPreferences } from "@/storage/notificationPreferences";
 import { router, useFocusEffect } from "expo-router";
@@ -15,6 +19,7 @@ import {
   CalendarDays,
   FileSignature,
   Info,
+  Languages,
   Moon,
   Palette,
   Shield,
@@ -31,6 +36,12 @@ type SettingItem = {
 } & (
   | { type: "switch"; value: boolean; onToggle: (value: boolean) => void }
   | { type: "value"; value: string }
+  | {
+      type: "select";
+      value: string;
+      options: { value: string; label: string }[];
+      onChange: (value: string) => void;
+    }
   | { type: "action"; onPress: () => void; danger?: boolean }
 );
 
@@ -40,10 +51,18 @@ type SettingSection = {
   items: SettingItem[];
 };
 
+const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+
 export default function SettingsScreen() {
   const colors = useTheme();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation();
+
+  const language = useSettingsStore((state) => state.language);
+  const currencyCode = useSettingsStore((state) => state.currencyCode);
+  const setLanguage = useSettingsStore((state) => state.setLanguage);
+  const setCurrency = useSettingsStore((state) => state.setCurrency);
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [budgetAlertsEnabled, setBudgetAlertsEnabled] = useState(true);
@@ -82,16 +101,41 @@ export default function SettingsScreen() {
     }, [loadPreferences]),
   );
 
+  const formatTime = (hour: number, minute: number) =>
+    `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+  const pickReminderTime = async () => {
+    await haptics.impact(haptics.ImpactFeedbackStyle.Light);
+    const buttons = HOURS.map((hour) => ({
+      text: formatTime(hour, 0),
+      onPress: async () => {
+        setDailyReminderHour(hour);
+        setDailyReminderMinute(0);
+        await notificationPreferences.setDailyReminderTime(hour, 0);
+        if (dailyReminderEnabled && notificationsEnabled) {
+          await NotificationService.scheduleDailyReminder(hour, 0);
+        }
+      },
+    }));
+    Alert.alert(
+      t("settings.reminderTimeTitle"),
+      t("settings.reminderTimeMessage"),
+      [{ text: t("common.cancel"), style: "cancel" }, ...buttons],
+    );
+  };
+
   const settingsSections: SettingSection[] = [
     {
-      title: "Apparence",
+      title: t("settings.appearance"),
       icon: Palette,
       items: [
         {
           key: "theme",
           icon: Moon,
-          label: "Mode sombre",
-          description: isDark ? "Thème sombre activé" : "Thème clair activé",
+          label: t("settings.darkMode"),
+          description: isDark
+            ? t("settings.darkEnabled")
+            : t("settings.lightEnabled"),
           type: "switch",
           value: isDark,
           onToggle: async (value: boolean) => {
@@ -100,24 +144,48 @@ export default function SettingsScreen() {
           },
         },
         {
+          key: "language",
+          icon: Languages,
+          label: t("settings.language"),
+          description: t("settings.languageDescription"),
+          type: "select",
+          value: language,
+          options: LANGUAGES.map((l) => ({
+            value: l.code,
+            label: t(l.labelKey),
+          })),
+          onChange: async (value: string) => {
+            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
+            setLanguage(value as Parameters<typeof setLanguage>[0]);
+          },
+        },
+        {
           key: "currency",
           icon: Wallet,
-          label: "Devise",
-          description: `Format : ${CURRENCY_LOCALE}`,
-          type: "value",
-          value: CURRENCY_CODE,
+          label: t("settings.currency"),
+          description: t("settings.currencyDescription"),
+          type: "select",
+          value: currencyCode,
+          options: CURRENCIES.map((c) => ({
+            value: c.code,
+            label: c.name[language],
+          })),
+          onChange: async (value: string) => {
+            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
+            setCurrency(value);
+          },
         },
       ],
     },
     {
-      title: "Notifications",
+      title: t("settings.notifications"),
       icon: Bell,
       items: [
         {
           key: "notifications-enabled",
           icon: Bell,
-          label: "Activer les notifications",
-          description: "Autoriser les notifications locales",
+          label: t("settings.enableNotifications"),
+          description: t("settings.allowLocalNotifications"),
           type: "switch",
           value: notificationsEnabled,
           onToggle: async (value: boolean) => {
@@ -134,8 +202,8 @@ export default function SettingsScreen() {
         {
           key: "budget-alerts",
           icon: CalendarDays,
-          label: "Alertes de dépassement de budget",
-          description: "Avertissements et alertes selon vos seuils",
+          label: t("settings.budgetAlerts"),
+          description: t("settings.budgetAlertsDesc"),
           type: "switch",
           value: budgetAlertsEnabled,
           onToggle: async (value: boolean) => {
@@ -147,8 +215,10 @@ export default function SettingsScreen() {
         {
           key: "daily-reminder",
           icon: CalendarDays,
-          label: "Rappel quotidien de saisie",
-          description: `Tous les jours à ${String(dailyReminderHour).padStart(2, "0")}:${String(dailyReminderMinute).padStart(2, "0")}`,
+          label: t("settings.dailyReminder"),
+          description: t("settings.everydayAt", {
+            time: formatTime(dailyReminderHour, dailyReminderMinute),
+          }),
           type: "switch",
           value: dailyReminderEnabled,
           onToggle: async (value: boolean) => {
@@ -168,319 +238,50 @@ export default function SettingsScreen() {
         {
           key: "daily-reminder-time",
           icon: CalendarDays,
-          label: "Heure du rappel quotidien",
-          description: `Actuellement : ${String(dailyReminderHour).padStart(2, "0")}:${String(dailyReminderMinute).padStart(2, "0")}`,
+          label: t("settings.reminderTime"),
+          description: t("settings.currentlyAt", {
+            time: formatTime(dailyReminderHour, dailyReminderMinute),
+          }),
           type: "action",
-          onPress: async () => {
-            await haptics.impact(haptics.ImpactFeedbackStyle.Light);
-            Alert.alert(
-              "Heure du rappel",
-              "Choisissez l'heure à laquelle vous souhaitez recevoir le rappel (approx).",
-              [
-                { text: "Annuler", style: "cancel" },
-                {
-                  text: "00:00",
-                  onPress: async () => {
-                    setDailyReminderHour(0);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(0, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(0, 0);
-                    }
-                  },
-                },
-                {
-                  text: "01:00",
-                  onPress: async () => {
-                    setDailyReminderHour(1);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(1, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(1, 0);
-                    }
-                  },
-                },
-                {
-                  text: "02:00",
-                  onPress: async () => {
-                    setDailyReminderHour(2);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(2, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(2, 0);
-                    }
-                  },
-                },
-                {
-                  text: "03:00",
-                  onPress: async () => {
-                    setDailyReminderHour(3);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(3, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(3, 0);
-                    }
-                  },
-                },
-                {
-                  text: "04:00",
-                  onPress: async () => {
-                    setDailyReminderHour(4);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(4, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(4, 0);
-                    }
-                  },
-                },
-                {
-                  text: "05:00",
-                  onPress: async () => {
-                    setDailyReminderHour(5);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(5, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(5, 0);
-                    }
-                  },
-                },
-                {
-                  text: "06:00",
-                  onPress: async () => {
-                    setDailyReminderHour(6);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(6, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(6, 0);
-                    }
-                  },
-                },
-                {
-                  text: "07:00",
-                  onPress: async () => {
-                    setDailyReminderHour(7);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(7, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(7, 0);
-                    }
-                  },
-                },
-                {
-                  text: "08:00",
-                  onPress: async () => {
-                    setDailyReminderHour(8);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(8, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(8, 0);
-                    }
-                  },
-                },
-                {
-                  text: "09:00",
-                  onPress: async () => {
-                    setDailyReminderHour(9);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(9, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(9, 0);
-                    }
-                  },
-                },
-                {
-                  text: "10:00",
-                  onPress: async () => {
-                    setDailyReminderHour(10);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(10, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(10, 0);
-                    }
-                  },
-                },
-                {
-                  text: "11:00",
-                  onPress: async () => {
-                    setDailyReminderHour(11);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(11, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(11, 0);
-                    }
-                  },
-                },
-                {
-                  text: "12:00",
-                  onPress: async () => {
-                    setDailyReminderHour(12);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(12, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(12, 0);
-                    }
-                  },
-                },
-                {
-                  text: "13:00",
-                  onPress: async () => {
-                    setDailyReminderHour(13);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(13, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(13, 0);
-                    }
-                  },
-                },
-                {
-                  text: "14:00",
-                  onPress: async () => {
-                    setDailyReminderHour(14);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(14, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(14, 0);
-                    }
-                  },
-                },
-                {
-                  text: "15:00",
-                  onPress: async () => {
-                    setDailyReminderHour(15);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(15, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(15, 0);
-                    }
-                  },
-                },
-                {
-                  text: "16:00",
-                  onPress: async () => {
-                    setDailyReminderHour(16);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(16, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(16, 0);
-                    }
-                  },
-                },
-                {
-                  text: "17:00",
-                  onPress: async () => {
-                    setDailyReminderHour(17);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(17, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(17, 0);
-                    }
-                  },
-                },
-                {
-                  text: "18:00",
-                  onPress: async () => {
-                    setDailyReminderHour(18);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(18, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(18, 0);
-                    }
-                  },
-                },
-                {
-                  text: "19:00",
-                  onPress: async () => {
-                    setDailyReminderHour(19);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(19, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(19, 0);
-                    }
-                  },
-                },
-                {
-                  text: "20:00",
-                  onPress: async () => {
-                    setDailyReminderHour(20);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(20, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(20, 0);
-                    }
-                  },
-                },
-                {
-                  text: "21:00",
-                  onPress: async () => {
-                    setDailyReminderHour(21);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(21, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(21, 0);
-                    }
-                  },
-                },
-                {
-                  text: "22:00",
-                  onPress: async () => {
-                    setDailyReminderHour(22);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(22, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(22, 0);
-                    }
-                  },
-                },
-                {
-                  text: "23:00",
-                  onPress: async () => {
-                    setDailyReminderHour(23);
-                    setDailyReminderMinute(0);
-                    await notificationPreferences.setDailyReminderTime(23, 0);
-                    if (dailyReminderEnabled && notificationsEnabled) {
-                      await NotificationService.scheduleDailyReminder(23, 0);
-                    }
-                  },
-                },
-              ],
-            );
-          },
+          onPress: pickReminderTime,
         },
         {
           key: "warning-threshold",
           icon: Info,
-          label: "Seuil d'alerte préventive",
-          description: `Alerte à ${warningThreshold}% du budget`,
+          label: t("settings.warningThreshold"),
+          description: t("settings.alertAt", {
+            percent: warningThreshold,
+          }),
           type: "value",
           value: `${warningThreshold}%`,
         },
       ],
     },
     {
-      title: "À propos",
+      title: t("settings.about"),
       icon: Info,
       items: [
         {
           key: "version",
           icon: Info,
-          label: "Version",
-          description: "Wallet — gestion de dépenses",
+          label: t("settings.version"),
+          description: t("settings.appDescription"),
           type: "value",
-          value: "1.0.0",
+          value: t("common.version"),
         },
         {
           key: "terms",
           icon: FileSignature,
-          label: "Conditions d'utilisation",
-          description: "Lire nos conditions d'utilisation",
+          label: t("settings.terms"),
+          description: t("settings.termsDesc"),
           type: "action",
           onPress: () => router.push("/legal/terms"),
         },
         {
           key: "privacy",
           icon: Shield,
-          label: "Politique de confidentialité",
-          description: "Vos données restent sur votre appareil",
+          label: t("settings.privacy"),
+          description: t("settings.privacyDesc"),
           type: "action",
           onPress: () => router.push("/legal/privacy"),
         },
@@ -493,7 +294,7 @@ export default function SettingsScreen() {
       <View style={styles.pageHeader}>
         <View style={styles.pageHeaderText}>
           <ThemedText variant="headline" weight="bold">
-            Paramètres
+            {t("settings.title")}
           </ThemedText>
         </View>
       </View>
@@ -549,6 +350,7 @@ export default function SettingsScreen() {
 
 function SettingRow({ item }: { item: SettingItem }) {
   const colors = useTheme();
+  const { t } = useTranslation();
   const Icon = item.icon;
   const tint =
     item.type === "action" && item.danger ? colors.error : colors.primary;
@@ -573,6 +375,16 @@ function SettingRow({ item }: { item: SettingItem }) {
         <ThemedText variant="caption" color="tertiary">
           {item.description}
         </ThemedText>
+        {item.type === "select" && (
+          <View style={styles.itemSelect}>
+            <Select
+              value={item.value}
+              options={item.options}
+              onChange={item.onChange}
+              placeholder={t("common.select")}
+            />
+          </View>
+        )}
       </View>
       {item.type === "switch" && (
         <Switch value={item.value} onValueChange={item.onToggle} />
@@ -619,10 +431,6 @@ const styles = StyleSheet.create({
   pageHeaderText: {
     flex: 1,
   },
-  pageDate: {
-    marginBottom: 2,
-    textTransform: "capitalize",
-  },
   section: {
     marginBottom: spacing.md,
     paddingVertical: spacing.sm,
@@ -667,14 +475,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 1,
   },
+  itemSelect: {
+    marginTop: spacing.xs,
+  },
   itemValue: {
     letterSpacing: 0.5,
-  },
-  versionFooter: {
-    paddingVertical: spacing.xl,
-    alignItems: "center",
-  },
-  versionText: {
-    textAlign: "center",
   },
 });

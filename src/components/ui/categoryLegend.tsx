@@ -1,5 +1,6 @@
 import { useTheme } from "@/hooks/use-theme";
-import { formatCurrency } from "@/services/currency";
+import { useTranslation } from "@/i18n";
+import { useFormatCurrency } from "@/services/currency";
 import { memo, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { ThemedText } from "../ui";
@@ -23,6 +24,9 @@ export const CategoryLegend = memo(function CategoryLegend({
   data,
 }: CategoryLegendProps) {
   const colors = useTheme();
+  const formatCurrency = useFormatCurrency();
+  // Re-render lorsque la langue ou la devise change pour reformater les montants.
+  useTranslation();
 
   const items = useMemo(() => {
     const filtered = data.filter((d) => d.value > 0);

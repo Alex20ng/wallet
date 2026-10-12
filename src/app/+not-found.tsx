@@ -2,11 +2,13 @@ import React from 'react';
 import { router } from 'expo-router';
 import { ThemedView, ThemedText, Button } from '@/components/ui';
 import { Screen } from '@/components/layout';
+import { useTranslation } from '@/i18n';
 import { spacing, borderRadius } from '@/constants/theme';
 
 import { StyleSheet } from 'react-native';
 
 export default function NotFoundScreen() {
+  const { t } = useTranslation();
   return (
     <Screen scrollable={false} style={styles.container}>
       <ThemedView variant="elevated" style={styles.card}>
@@ -14,13 +16,13 @@ export default function NotFoundScreen() {
           🔍
         </ThemedText>
         <ThemedText variant="headline" weight="bold" style={styles.title}>
-          Page introuvable
+          {t('notFound.title')}
         </ThemedText>
         <ThemedText variant="body" color="secondary" style={styles.message}>
-          Cette page n&apos;existe pas ou a été déplacée.
+          {t('notFound.message')}
         </ThemedText>
         <Button
-          title="Retour à l&apos;accueil"
+          title={t('notFound.backHome')}
           onPress={() => router.replace('/')}
           variant="primary"
           size="lg"

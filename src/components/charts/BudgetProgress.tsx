@@ -7,7 +7,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useTheme } from "../../hooks/use-theme";
-import { formatCurrency } from "../../services/currency";
+import { useTranslation } from "../../i18n";
+import { useFormatCurrency } from "../../services/currency";
 import { ThemedText } from "../ui";
 
 interface BudgetProgressProps {
@@ -28,6 +29,8 @@ export const BudgetProgress = memo(function BudgetProgress({
   animate = true,
 }: BudgetProgressProps) {
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
   const progress = useSharedValue(0);
 
   const ratio = budget > 0 ? spent / budget : spent > 0 ? 1 : 0;
@@ -118,19 +121,21 @@ export const BudgetProgress = memo(function BudgetProgress({
             minimumFontScale={0.7}
             style={styles.total}
           >
-            {`sur ${formatCurrency(budget)}`}
+            {t("budgets.ofAmount", { amount: formatCurrency(budget) })}
           </ThemedText>
         </View>
       )}
 
       {isOverBudget && (
         <ThemedText variant="caption" color="error" numberOfLines={2}>
-          {`Dépassement de ${formatCurrency(spent - budget)}`}
+          {t("budgets.overspendOf", {
+            amount: formatCurrency(spent - budget),
+          })}
         </ThemedText>
       )}
       {isNearLimit && (
         <ThemedText variant="caption" color="warning" numberOfLines={2}>
-          {`Attention : ${Math.round(ratio * 100)}% du budget utilisé`}
+          {t("budgets.warningUsed", { percent: Math.round(ratio * 100) })}
         </ThemedText>
       )}
     </View>

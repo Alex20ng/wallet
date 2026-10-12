@@ -1,11 +1,12 @@
-import React, { forwardRef, ComponentRef } from 'react';
+import React, { forwardRef, ComponentRef, useMemo } from 'react';
 import { View, StyleSheet, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ThemedText, Modal } from '../ui';
 import { useTheme } from '../../hooks/use-theme';
 import { spacing, borderRadius } from '../../constants/theme';
+import { useTranslation } from '../../i18n';
 import { startOfMonth, addMonths, isSameDay, getDaysInMonth } from '../../services/date';
-import { formatDate } from '../../services/currency';
+import { useFormatDate } from '../../services/currency';
 
 interface DatePickerProps {
   value: Date;
@@ -27,7 +28,7 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
     value,
     onChange,
     label,
-    placeholder = 'Choisir une date',
+    placeholder,
     minDate,
     maxDate,
     disabled = false,
@@ -38,8 +39,20 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
     style,
   }, ref) => {
     const colors = useTheme();
+    const { t, locale } = useTranslation();
+    const formatDate = useFormatDate();
+    const resolvedPlaceholder = placeholder ?? t('common.chooseDate');
     const [isOpen, setIsOpen] = React.useState(false);
     const [currentMonth, setCurrentMonth] = React.useState(startOfMonth(value));
+
+    const weekDays = useMemo(() => {
+      const base = new Date(2024, 8, 1);
+      return Array.from({ length: 7 }, (_, i) => {
+        const day = new Date(base);
+        day.setDate(base.getDate() + i);
+        return day.toLocaleDateString(locale, { weekday: 'short' });
+      });
+    }, [locale]);
 
     const handlePress = () => {
       if (!disabled) {
@@ -98,7 +111,7 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
                   weight={isSelected || isCurrent ? 'semibold' : 'regular'}
                   color={isSelected ? 'inverse' : isDisabled ? 'tertiary' : isCurrent ? 'link' : 'primary'}
                 >
-                  {month.toLocaleString('fr-FR', { month: 'short' })}
+                  {month.toLocaleString(locale, { month: 'short' })}
                 </ThemedText>
               </Pressable>
             );
@@ -141,7 +154,7 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
       return (
         <View>
           <View style={styles.weekHeader}>
-            {['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'].map((day) => (
+            {weekDays.map((day) => (
               <ThemedText key={day} variant="overline" color="tertiary" style={styles.weekDay}>
                 {day}
               </ThemedText>
@@ -175,7 +188,7 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
                       ]}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isSelected, disabled: isDisabled }}
-                      accessibilityLabel={day.toLocaleDateString('fr-FR')}
+                      accessibilityLabel={day.toLocaleDateString(locale)}
                     >
                       <ThemedText
                         variant="caption"
@@ -224,7 +237,7 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
           testID={testID}
         >
           <ThemedText variant="body" color={value ? 'primary' : 'tertiary'} style={styles.inputText}>
-            {value ? formatDate(value) : placeholder}
+            {value ? formatDate(value) : resolvedPlaceholder}
           </ThemedText>
           <Calendar size={18} strokeWidth={2} color={colors.textTertiary} />
         </Pressable>
@@ -234,24 +247,24 @@ const DatePicker = forwardRef<ComponentRef<typeof Pressable>, DatePickerProps>(
           onClose={() => setIsOpen(false)}
           size="lg"
           showHandle={true}
-          title={label || 'Choisir une date'}
+          title={label || t('common.chooseDate')}
         >
           <View style={styles.calendarHeader}>
             <Pressable
               onPress={() => setCurrentMonth(addMonths(currentMonth, -1))}
               style={[styles.navButton, { backgroundColor: colors.backgroundSecondary }]}
-              accessibilityLabel="Mois précédent"
+              accessibilityLabel={t('common.prevMonth')}
               hitSlop={8}
             >
               <ChevronLeft size={18} strokeWidth={2.4} color={colors.textPrimary} />
             </Pressable>
             <ThemedText variant="subtitle" weight="semibold" style={styles.monthTitle}>
-              {currentMonth.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}
+              {currentMonth.toLocaleString(locale, { month: 'long', year: 'numeric' })}
             </ThemedText>
             <Pressable
               onPress={() => setCurrentMonth(addMonths(currentMonth, 1))}
               style={[styles.navButton, { backgroundColor: colors.backgroundSecondary }]}
-              accessibilityLabel="Mois suivant"
+              accessibilityLabel={t('common.nextMonth')}
               hitSlop={8}
             >
               <ChevronRight size={18} strokeWidth={2.4} color={colors.textPrimary} />

@@ -2,6 +2,7 @@ import { ThemedText, ThemedView } from "@/components/ui";
 import { spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import { router } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { ReactNode, useCallback } from "react";
@@ -20,6 +21,7 @@ interface LegalDocumentProps {
 export function LegalDocument({ title, date, children }: LegalDocumentProps) {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const handleBack = useCallback(async () => {
     await haptics.impact(haptics.ImpactFeedbackStyle.Light);
@@ -44,7 +46,7 @@ export function LegalDocument({ title, date, children }: LegalDocumentProps) {
           onPress={handleBack}
           style={[styles.backButton, { backgroundColor: colors.surface }]}
           accessibilityRole="button"
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('common.back')}
         >
           <ArrowLeft size={20} strokeWidth={2.4} color={colors.textPrimary} />
         </Pressable>
@@ -63,7 +65,7 @@ export function LegalDocument({ title, date, children }: LegalDocumentProps) {
         showsVerticalScrollIndicator={false}
       >
         <ThemedText variant="body" color="tertiary" style={styles.dateText}>
-          Dernière mise à jour : {date}
+          {t('legal.lastUpdated', { date })}
         </ThemedText>
         {children}
       </ScrollView>

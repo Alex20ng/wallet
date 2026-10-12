@@ -7,6 +7,7 @@ import {
 import { borderRadius, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "@/i18n";
 import { useAppStore } from "@/store/useAppStore";
 import type { Category } from "@/types";
 import {
@@ -57,6 +58,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
     const { dismiss } = useBottomSheetModal();
     const insets = useSafeAreaInsets();
     const colors = useTheme();
+    const { t } = useTranslation();
 
     const { addCategory, updateCategory, deleteCategory, isLoading } =
       useAppStore();
@@ -118,12 +120,12 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
 
     const validateForm = useCallback(() => {
       const newErrors: Record<string, string> = {};
-      if (!formData.name.trim()) newErrors.name = "Le nom est requis";
-      if (!formData.icon) newErrors.icon = "Sélectionnez une icône";
-      if (!formData.color) newErrors.color = "Sélectionnez une couleur";
+      if (!formData.name.trim()) newErrors.name = t("validation.nameRequired");
+      if (!formData.icon) newErrors.icon = t("validation.selectIcon");
+      if (!formData.color) newErrors.color = t("validation.selectColor");
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
-    }, [formData]);
+    }, [formData, t]);
 
     const handleSubmit = useCallback(async () => {
       if (!validateForm()) {
@@ -147,19 +149,19 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
         bottomSheetRef.current?.dismiss();
       } catch {
         await haptics.notification(haptics.NotificationFeedbackType.Error);
-        setErrors({ submit: "Erreur lors de la sauvegarde" });
+        setErrors({ submit: t("errors.save") });
       }
-    }, [addCategory, editingCategory, formData, updateCategory, validateForm]);
+    }, [addCategory, editingCategory, formData, t, updateCategory, validateForm]);
 
     const handleDelete = useCallback(() => {
       if (!editingCategory) return;
       Alert.alert(
-        "Supprimer la catégorie",
-        `Voulez-vous supprimer « ${editingCategory.name} » ? Les transactions associées ne seront pas supprimées.`,
+        t("categories.deleteTitle"),
+        t("categories.deleteMessage", { name: editingCategory.name }),
         [
-          { text: "Annuler", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Supprimer",
+            text: t("common.delete"),
             style: "destructive",
             onPress: async () => {
               await haptics.impact(haptics.ImpactFeedbackStyle.Heavy);
@@ -178,7 +180,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
           },
         ],
       );
-    }, [deleteCategory, editingCategory]);
+    }, [deleteCategory, editingCategory, t]);
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -211,13 +213,13 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
             <View style={{ flex: 1 }}>
               {editingCategory ? (
                 <Button
-                  title="Supprimer"
+                  title={t("common.delete")}
                   onPress={handleDelete}
                   variant="danger"
                 />
               ) : (
                 <Button
-                  title="Annuler"
+                  title={t("common.cancel")}
                   onPress={() => dismiss()}
                   variant="ghost"
                 />
@@ -226,7 +228,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
 
             <View style={{ flex: 1 }}>
               <Button
-                title={editingCategory ? "Enregistrer" : "Créer"}
+                title={editingCategory ? t("common.save") : t("common.create")}
                 onPress={handleSubmit}
                 variant="primary"
                 loading={isLoading}
@@ -242,6 +244,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
         handleSubmit,
         insets.bottom,
         isLoading,
+        t,
       ],
     );
 
@@ -255,11 +258,11 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
 
     const typeOptions = useMemo(
       () => [
-        { value: "expense", label: "Dépense" },
-        { value: "income", label: "Revenu" },
-        { value: "both", label: "Les deux" },
+        { value: "expense", label: t("common.expense") },
+        { value: "income", label: t("common.income") },
+        { value: "both", label: t("common.both") },
       ],
-      [],
+      [t],
     );
 
     const [iconGridWidth, setIconGridWidth] = useState(0);
@@ -314,7 +317,9 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
               weight="bold"
               className="text-center"
             >
-              {editingCategory ? "Modifier la catégorie" : "Nouvelle catégorie"}
+              {editingCategory
+                ? t("categories.editTitle")
+                : t("categories.newTitle")}
             </ThemedText>
           </View>
 
@@ -326,14 +331,14 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                 color="secondary"
                 className="mb-2 ml-1"
               >
-                Nom <ThemedText color="error">*</ThemedText>
+                {t("common.name")} <ThemedText color="error">*</ThemedText>
               </ThemedText>
               <BottomSheetTextInput
                 value={formData.name}
                 onChangeText={(text) =>
                   setFormData((prev) => ({ ...prev, name: text }))
                 }
-                placeholder="Ex: Courses, Transport..."
+                placeholder={t("categories.namePlaceholder")}
                 placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
                 style={[
@@ -344,7 +349,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                     color: colors.textPrimary,
                   },
                 ]}
-                accessibilityLabel="Nom de la catégorie"
+                accessibilityLabel={t("common.name")}
               />
               {errors.name && (
                 <ThemedText
@@ -364,7 +369,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                 color="secondary"
                 className="mb-2 ml-1"
               >
-                Type
+                {t("common.type")}
               </ThemedText>
               <Select
                 value={formData.type}
@@ -375,7 +380,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                   }))
                 }
                 options={typeOptions}
-                placeholder="Type de transaction"
+                placeholder={t("categories.typePlaceholder")}
               />
             </View>
 
@@ -386,7 +391,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                 color="secondary"
                 className="mb-2 ml-1"
               >
-                Icône
+                {t("common.icon")}
               </ThemedText>
 
               {/* onLayout sur la grille elle-même */}
@@ -410,7 +415,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                             }
                             accessibilityRole="button"
                             accessibilityState={{ selected }}
-                            accessibilityLabel={`Icône ${name}`}
+                            accessibilityLabel={t("common.iconLabel", { name })}
                             style={[
                               styles.pickerItem,
                               {
@@ -456,7 +461,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                 color="secondary"
                 className="mb-2 ml-1"
               >
-                Couleur
+                {t("common.color")}
               </ThemedText>
               <View onLayout={handleColorLayout} style={{ gap: GRID_GAP }}>
                 {colorItemSize > 0 &&
@@ -480,7 +485,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                             }
                             accessibilityRole="button"
                             accessibilityState={{ selected }}
-                            accessibilityLabel={`Couleur ${color}`}
+                            accessibilityLabel={t("common.colorLabel", { color })}
                             style={[
                               styles.colorItem,
                               { width: colorItemSize, height: colorItemSize },

@@ -1,7 +1,8 @@
 import { CATEGORY_ICON_MAP } from "@/constants/category-icons";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { formatCurrency } from "@/services/currency";
+import { useTranslation } from "@/i18n";
+import { useFormatCurrency } from "@/services/currency";
 import { Bell, Pencil, Trash } from "lucide-react-native";
 import { memo, useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -26,10 +27,10 @@ interface BudgetCardProps {
 
 type Status = "good" | "warning" | "over";
 
-const STATUS_LABEL: Record<Status, string> = {
-  good: "Dans le budget",
-  warning: "Attention",
-  over: "Dépassé",
+const STATUS_KEY: Record<Status, "budgets.statusGood" | "budgets.statusWarning" | "budgets.statusOver"> = {
+  good: "budgets.statusGood",
+  warning: "budgets.statusWarning",
+  over: "budgets.statusOver",
 };
 
 export const BudgetCard = memo(function BudgetCard({
@@ -43,6 +44,8 @@ export const BudgetCard = memo(function BudgetCard({
   onDelete,
 }: BudgetCardProps) {
   const colors = useTheme();
+  const { t } = useTranslation();
+  const formatCurrency = useFormatCurrency();
   const progress = useSharedValue(0);
 
   const ratio = budget > 0 ? spent / budget : spent > 0 ? 1 : 0;
@@ -111,7 +114,7 @@ export const BudgetCard = memo(function BudgetCard({
                   weight="semibold"
                   style={{ color: statusColor }}
                 >
-                  {STATUS_LABEL[status]}
+                  {t(STATUS_KEY[status])}
                 </ThemedText>
               </View>
               <ThemedText variant="caption" color="tertiary">
@@ -132,7 +135,7 @@ export const BudgetCard = memo(function BudgetCard({
                 : formatCurrency(remaining)}
             </ThemedText>
             <ThemedText variant="caption" color="tertiary">
-              {isOver ? "dépassé" : "restant"}
+              {isOver ? t("budgets.overShort") : t("budgets.remainingShort")}
             </ThemedText>
           </View>
         </View>
@@ -169,7 +172,7 @@ export const BudgetCard = memo(function BudgetCard({
         <View style={styles.stats}>
           <View style={styles.stat}>
             <ThemedText variant="caption" color="tertiary">
-              Dépensé
+              {t("budgets.spent")}
             </ThemedText>
             <ThemedText variant="body" weight="semibold" style={styles.tabular}>
               {spent > 0 ? formatCurrency(spent) : "—"}
@@ -177,7 +180,7 @@ export const BudgetCard = memo(function BudgetCard({
           </View>
           <View style={[styles.stat, styles.statRight]}>
             <ThemedText variant="caption" color="tertiary">
-              Budget
+              {t("common.budget")}
             </ThemedText>
             <ThemedText variant="body" weight="semibold" style={styles.tabular}>
               {formatCurrency(budget)}
@@ -191,8 +194,10 @@ export const BudgetCard = memo(function BudgetCard({
         <View style={styles.alertInfo}>
           <Bell size={14} strokeWidth={2.2} color={colors.textTertiary} />
           <ThemedText variant="caption" color="tertiary">
-            {`Alerte à ${Math.round(alertThreshold * 100)}%`}
-          </ThemedText>
+{t("budgets.alertAt", {
+            percent: Math.round(alertThreshold * 100),
+          })}
+        </ThemedText>
         </View>
 
         <View style={styles.actions}>
@@ -200,7 +205,7 @@ export const BudgetCard = memo(function BudgetCard({
             onPress={press(onEdit)}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel={`Modifier le budget ${categoryName}`}
+            accessibilityLabel={t("budgets.editBudget", { name: categoryName })}
             style={({ pressed }) => [
               styles.actionButton,
               { backgroundColor: colors.primaryLight },
@@ -214,7 +219,7 @@ export const BudgetCard = memo(function BudgetCard({
             onPress={press(onDelete)}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel={`Supprimer le budget ${categoryName}`}
+            accessibilityLabel={t("budgets.deleteBudget", { name: categoryName })}
             style={({ pressed }) => [
               styles.actionButton,
               { backgroundColor: colors.errorLight },
