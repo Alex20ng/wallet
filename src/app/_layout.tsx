@@ -9,19 +9,30 @@ import { runMigrations } from "@/services/database";
 import { NotificationService } from "@/services/notifications/NotificationService";
 import { notificationPreferences } from "@/storage/notificationPreferences";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
+import Head from "expo-router/head";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ duration: 400, fade: true });
 
+// Pages publiques statiques : elles ne dépendent pas de la base locale et
+// peuvent être pré-rendues côté serveur (SEO) sans attendre les migrations.
+const isPublicRoute = (pathname: string) =>
+  pathname === "/" || pathname.startsWith("/legal/");
+
 export default function RootLayout() {
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
+
+  const renderNavigator =
+    ready || (Platform.OS === "web" && isPublicRoute(pathname));
 
   const handleSplashFinish = useCallback(() => setSplashDone(true), []);
 
@@ -55,7 +66,12 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <Providers>
             <ThemedView style={{ flex: 1 }}>
-              {ready ? (
+              {!isPublicRoute(pathname) ? (
+                <Head>
+                  <meta name="robots" content="noindex,nofollow" />
+                </Head>
+              ) : null}
+              {renderNavigator ? (
                 <Stack
                   screenOptions={{
                     headerShown: false,

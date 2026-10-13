@@ -35,7 +35,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // n'ont pas d'équivalent web fiable). Barre flottante en capsule, avec un effet
 // de verre obtenu en CSS (`backdrop-filter`), donc sans dépendance supplémentaire.
 const TABS = [
-  { name: "index", href: "/", titleKey: "tabs.home", Icon: LayoutGrid },
+  { name: "home", href: "/home", titleKey: "tabs.home", Icon: LayoutGrid },
   {
     name: "transactions",
     href: "/transactions",

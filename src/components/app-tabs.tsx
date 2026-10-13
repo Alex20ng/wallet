@@ -5,7 +5,7 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 
 const TABS = [
   {
-    name: "index",
+    name: "home",
     titleKey: "tabs.home",
     sf: "square.grid.2x2.fill",
     md: "dashboard",
@@ -22,7 +22,12 @@ const TABS = [
     sf: "tag.fill",
     md: "sell",
   },
-  { name: "budgets", titleKey: "tabs.budgets", sf: "chart.pie.fill", md: "savings" },
+  {
+    name: "budgets",
+    titleKey: "tabs.budgets",
+    sf: "chart.pie.fill",
+    md: "savings",
+  },
   {
     name: "settings",
     titleKey: "tabs.settings",

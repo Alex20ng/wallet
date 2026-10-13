@@ -42,6 +42,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# generated SEO files (construites depuis EXPO_PUBLIC_SITE_URL)
+public/robots.txt
+public/sitemap.xml
+public/llms.txt
+
 example
 
 # generated native folders

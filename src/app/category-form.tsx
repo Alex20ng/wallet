@@ -1,3 +1,4 @@
+import { NoIndexHead } from "@/components/seo/public-head";
 import { Button, Input, Select, ThemedText } from "@/components/ui";
 import {
   CATEGORY_COLORS,
@@ -8,10 +9,10 @@ import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
 import { useAppStore } from "@/store/useAppStore";
+import { alert } from "@/utils/alert";
 import { router, useLocalSearchParams } from "expo-router";
 import { Check } from "lucide-react-native";
 import { useState } from "react";
-import { alert } from "@/utils/alert";
 import {
   KeyboardAvoidingView,
   LayoutChangeEvent,
@@ -109,6 +110,7 @@ export default function CategoryFormSheet() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1"
     >
+      <NoIndexHead />
       <ScrollView
         contentContainerClassName="gap-2 px-6 pt-6 pb-4"
         keyboardShouldPersistTaps="handled"

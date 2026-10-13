@@ -12,6 +12,7 @@ import { type TransactionType } from '@/services/currency';
 import { spacing, borderRadius, shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTranslation } from '@/i18n';
+import { NoIndexHead } from '@/components/seo/public-head';
 
 import { DatePicker } from '@/components/forms';
 
@@ -144,7 +145,9 @@ export default function TransactionFormScreen() {
   const isExpense = type === 'expense';
 
   return (
-    <Screen>
+    <>
+      <NoIndexHead />
+      <Screen>
       <PageHeader
         title={isEditing ? t('transaction.editTitle') : t('transaction.newTitle')}
         subtitle={isExpense ? t('transaction.addExpense') : t('transaction.addIncome')}
@@ -299,6 +302,7 @@ export default function TransactionFormScreen() {
         )}
       </View>
     </Screen>
+    </>
   );
 }
 

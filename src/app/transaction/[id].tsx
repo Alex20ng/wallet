@@ -10,6 +10,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { Calendar, Clock, FileText, Pencil, Tag } from "lucide-react-native";
+import { NoIndexHead } from "@/components/seo/public-head";
 import React, { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { alert } from "@/utils/alert";
@@ -67,6 +68,7 @@ export default function TransactionDetailScreen() {
   if (!transaction) {
     return (
       <Screen safeAreaEdges={["top", "bottom"]}>
+        <NoIndexHead />
         <PageHeader title={t("transaction.title")} onBack={() => router.back()} />
         <ThemedText variant="body" color="tertiary" style={styles.loading}>
           {t("common.loading")}
@@ -85,7 +87,9 @@ export default function TransactionDetailScreen() {
   };
 
   return (
-    <Screen>
+    <>
+      <NoIndexHead />
+      <Screen>
       <PageHeader
         title={t("transaction.title")}
         subtitle={isExpense ? t("common.expense") : t("common.income")}
@@ -212,6 +216,7 @@ export default function TransactionDetailScreen() {
         />
       </View>
     </Screen>
+    </>
   );
 }
 
