@@ -45,10 +45,10 @@ export const CURRENCIES: Currency[] = [
     name: { fr: "Franc suisse", en: "Swiss Franc" },
   },
   {
-    code: "NGN",
-    symbol: "₦",
+    code: "DZD",
+    symbol: "DA",
     decimals: 2,
-    name: { fr: "Naira", en: "Nigerian Naira" },
+    name: { fr: "Dinar algérien", en: "Algerian Dinar" },
   },
   {
     code: "MAD",
