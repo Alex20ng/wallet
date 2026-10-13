@@ -1,6 +1,6 @@
 import { PublicHead } from "@/components/seo/public-head";
 import { ThemedText, ThemedView } from "@/components/ui";
-import { absoluteUrl, APP_NAME } from "@/constants/seo";
+import { absoluteUrl, APP_NAME, OG_IMAGE_PATH } from "@/constants/seo";
 import { borderRadius, shadows, spacing, typography } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettingsStore } from "@/store/useSettingsStore";
@@ -228,7 +228,7 @@ function DocsContent() {
       applicationCategory: "FinanceApplication",
       operatingSystem: "Android, iOS, Web",
       url: canonical,
-      ...(canonical ? { image: `${canonical}/icons/og-image.png` } : {}),
+      ...(canonical ? { image: absoluteUrl(OG_IMAGE_PATH) } : {}),
     },
     {
       "@context": "https://schema.org",

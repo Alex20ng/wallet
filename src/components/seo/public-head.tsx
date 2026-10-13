@@ -1,5 +1,15 @@
+import {
+  absoluteUrl,
+  APP_NAME,
+  OG_IMAGE_ALT,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_PATH,
+  OG_IMAGE_WIDTH,
+  OG_LOCALE,
+  OG_LOCALE_ALTERNATE,
+  TWITTER_SITE,
+} from "@/constants/seo";
 import Head from "expo-router/head";
-import { APP_NAME, absoluteUrl, OG_IMAGE_PATH } from "@/constants/seo";
 
 type PublicHeadProps = {
   title: string;
@@ -8,6 +18,8 @@ type PublicHeadProps = {
   robots?: string;
   ogType?: "website" | "article";
   image?: string;
+  imageAlt?: string;
+  locale?: string;
   jsonLd?: Record<string, unknown>[];
 };
 
@@ -23,6 +35,8 @@ export function PublicHead({
   robots = "index,follow",
   ogType = "website",
   image = OG_IMAGE_PATH,
+  imageAlt = OG_IMAGE_ALT,
+  locale = OG_LOCALE,
   jsonLd,
 }: PublicHeadProps) {
   const url = absoluteUrl(path);
@@ -38,7 +52,10 @@ export function PublicHead({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:type" content={ogType} />
-      <meta property="og:locale" content="fr_FR" />
+      <meta property="og:locale" content={locale} />
+      {OG_LOCALE_ALTERNATE.filter((alt) => alt !== locale).map((alt) => (
+        <meta key={alt} property="og:locale:alternate" content={alt} />
+      ))}
       <meta property="og:site_name" content={APP_NAME} />
       <meta
         name="twitter:card"
@@ -46,8 +63,26 @@ export function PublicHead({
       />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
+      {TWITTER_SITE ? (
+        <meta name="twitter:site" content={TWITTER_SITE} />
+      ) : null}
+      {TWITTER_SITE ? (
+        <meta name="twitter:creator" content={TWITTER_SITE} />
+      ) : null}
       {imageUrl ? <meta property="og:image" content={imageUrl} /> : null}
+      {imageUrl ? (
+        <meta property="og:image:secure_url" content={imageUrl} />
+      ) : null}
+      {imageUrl ? <meta property="og:image:type" content="image/png" /> : null}
+      {imageUrl ? (
+        <meta property="og:image:width" content={String(OG_IMAGE_WIDTH)} />
+      ) : null}
+      {imageUrl ? (
+        <meta property="og:image:height" content={String(OG_IMAGE_HEIGHT)} />
+      ) : null}
+      {imageUrl ? <meta property="og:image:alt" content={imageAlt} /> : null}
       {imageUrl ? <meta name="twitter:image" content={imageUrl} /> : null}
+      {imageUrl ? <meta name="twitter:image:alt" content={imageAlt} /> : null}
       {jsonLd?.map((schema) => (
         <script key={schema["@type"] as string} type="application/ld+json">
           {JSON.stringify(schema)}
