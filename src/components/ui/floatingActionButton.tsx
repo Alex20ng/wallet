@@ -12,7 +12,7 @@ export default function FloatingActionButton() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const isWeb = (Platform.OS = "web");
+  const isWeb = Platform.OS === "web";
 
   return (
     <Pressable
