@@ -24,7 +24,7 @@ export default function FloatingActionButton() {
         {
           position: "absolute",
           right: 20,
-          bottom: isWeb ? insets.bottom + 10 : insets.bottom - 20, // au-dessus de la tab bar
+          bottom: isWeb ? insets.bottom + 100 : insets.bottom - 20, // au-dessus de la tab bar
           width: SIZE,
           height: SIZE,
           zIndex: 100,

@@ -3,6 +3,7 @@ import "../global.css";
 import { Providers } from "@/components/providers";
 import { AnimatedSplash } from "@/components/splash/AnimatedSplash";
 import { ThemedView } from "@/components/ui/themed-view";
+import VercelAnalytics from "@/components/VercelAnalytics";
 import { loadThemePreference } from "@/hooks/theme-preference";
 import { runMigrations } from "@/services/database";
 import { NotificationService } from "@/services/notifications/NotificationService";
@@ -105,6 +106,7 @@ export default function RootLayout() {
                       headerShown: false,
                     }}
                   />
+                  <VercelAnalytics />
                 </Stack>
               ) : null}
               <StatusBar style="auto" />

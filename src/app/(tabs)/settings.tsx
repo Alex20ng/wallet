@@ -45,7 +45,7 @@ import {
   Wallet,
 } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 type SettingItem = {
   key: string;
@@ -68,6 +68,7 @@ type SettingSection = {
   title: string;
   icon: LucideIcon;
   items: SettingItem[];
+  hideOnWeb?: boolean;
 };
 
 export default function SettingsScreen() {
@@ -273,6 +274,7 @@ export default function SettingsScreen() {
     {
       title: t("settings.notifications"),
       icon: Bell,
+      hideOnWeb: true,
       items: [
         {
           key: "notifications-enabled",
@@ -423,7 +425,11 @@ export default function SettingsScreen() {
       </View>
 
       <View>
-        {settingsSections.map((section) => (
+        {settingsSections
+          .filter(
+            (section) => !(Platform.OS === "web" && section.hideOnWeb),
+          )
+          .map((section) => (
           <ThemedView
             key={section.title}
             variant="surface"
