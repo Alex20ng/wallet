@@ -67,6 +67,13 @@ export default function TransactionDetailScreen() {
     );
   };
 
+  useEffect(() => {
+    if (initialized && id && !transaction) {
+      if (router.canGoBack()) router.back();
+      else router.replace("/transactions");
+    }
+  }, [initialized, id, transaction]);
+
   if (!transaction) {
     return (
       <Screen safeAreaEdges={["top", "bottom"]}>

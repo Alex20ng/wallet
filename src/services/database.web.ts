@@ -221,13 +221,15 @@ class WebWalletDB implements WalletDatabase {
     const table = dex[tableName] as Table<SqlRow, string>;
     if (!table) return;
     const snapshot = [...(this.tables[tableName] ?? [])];
-    const dexWrite = table.bulkPut(snapshot as never[]);
     this.writeQueue = this.writeQueue
-      .then(() => dexWrite)
+      .then(() =>
+        dex.transaction("rw", table, async () => {
+          await table.clear();
+          await table.bulkPut(snapshot as never[]);
+        }),
+      )
       .then(() => undefined)
-      .catch((err) => {
-        console.error("[WebWalletDB]", err);
-      });
+      .catch((err) => console.error("[WebWalletDB]", err));
   }
 
   private applyWrite(
