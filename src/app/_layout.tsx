@@ -24,7 +24,13 @@ SplashScreen.setOptions({ duration: 400, fade: true });
 // Pages publiques statiques : elles ne dépendent pas de la base locale et
 // peuvent être pré-rendues côté serveur (SEO) sans attendre les migrations.
 const isPublicRoute = (pathname: string) =>
-  pathname === "/" || pathname.startsWith("/legal/");
+  pathname === "/docs" || pathname.startsWith("/legal/");
+
+// Pages indexables par les moteurs de recherche. La racine "/" correspond à
+// l'application (données privées) : seule la présentation et les pages
+// légales sont exposées à l'indexation.
+const isIndexableRoute = (pathname: string) =>
+  pathname === "/docs" || pathname.startsWith("/legal/");
 
 export default function RootLayout() {
   const pathname = usePathname();
@@ -66,7 +72,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <Providers>
             <ThemedView style={{ flex: 1 }}>
-              {!isPublicRoute(pathname) ? (
+              {!isIndexableRoute(pathname) ? (
                 <Head>
                   <meta name="robots" content="noindex,nofollow" />
                 </Head>
@@ -122,9 +128,9 @@ export default function RootLayout() {
                       headerShown: false,
                     }}
                   />
-                  <VercelAnalytics />
                 </Stack>
               ) : null}
+              <VercelAnalytics />
               <StatusBar style="auto" />
             </ThemedView>
           </Providers>

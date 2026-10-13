@@ -6,7 +6,7 @@ import {
 import { EmptyState, Screen, TransactionItem } from "@/components/layout";
 import { ThemedText, ThemedView } from "@/components/ui";
 import CategoryLegend from "@/components/ui/categoryLegend";
-import { borderRadius, gradients, shadows, spacing } from "@/constants/theme";
+import { borderRadius, gradients, shadow, spacing } from "@/constants/theme";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
@@ -69,8 +69,12 @@ export default function DashboardScreen() {
           padding: spacing.lg,
           paddingBottom: spacing.lg - spacing.xs,
           marginBottom: spacing.md,
-          ...shadows.lg,
-          shadowColor: "#059669",
+          ...shadow("#059669", {
+            y: 12,
+            blur: 24,
+            opacity: 0.12,
+            elevation: 10,
+          }),
           overflow: "hidden",
         },
         heroTopRow: {
@@ -148,8 +152,7 @@ export default function DashboardScreen() {
         },
         periodButtonActive: {
           backgroundColor: "#FFFFFF",
-          ...shadows.xs,
-          shadowOpacity: 0.2,
+          ...shadow("#059669", { y: 1, blur: 3, opacity: 0.2, elevation: 1 }),
         },
         periodButtonText: {
           color: "rgba(255,255,255,0.85)",

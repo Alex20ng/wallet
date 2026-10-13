@@ -16,7 +16,7 @@ import Animated, {
 import {
   borderRadius,
   gradients,
-  shadows,
+  shadow,
   spacing,
   typography,
 } from "../../constants/theme";
@@ -230,10 +230,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  primaryShadow: {
-    ...shadows.sm,
-    shadowColor: "#10B981",
-  },
+  primaryShadow: shadow("#10B981", {
+    y: 2,
+    blur: 6,
+    opacity: 0.06,
+    elevation: 2,
+  }),
 
   content: {
     flexDirection: "row",

@@ -5,7 +5,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-na
 import { useTheme } from '../../hooks/use-theme';
 import { spacing, borderRadius, animation } from '../../constants/theme';
 import { useTranslation } from '../../i18n';
-import { ThemedText, Modal } from '../ui';
+import { ThemedText } from '../ui/themed-text';
+import Modal from '../ui/modal';
 
 import Input from '../ui/input';
 

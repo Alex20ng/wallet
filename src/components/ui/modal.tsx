@@ -1,5 +1,5 @@
 import { X } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -20,7 +21,7 @@ import Animated, {
 import {
   animation,
   borderRadius,
-  shadows,
+  shadow,
   spacing,
 } from "../../constants/theme";
 import { useTheme } from "../../hooks/use-theme";
@@ -60,6 +61,15 @@ function Modal({
   const { t } = useTranslation();
   const overlayOpacity = useSharedValue(0);
   const translateY = useSharedValue(40);
+  const [rendered, setRendered] = useState(visible);
+  const [prevVisible, setPrevVisible] = useState(visible);
+
+  if (prevVisible !== visible) {
+    setPrevVisible(visible);
+    if (visible && !rendered) {
+      setRendered(true);
+    }
+  }
 
   useEffect(() => {
     if (visible) {
@@ -72,9 +82,13 @@ function Modal({
         easing: Easing.out(Easing.cubic),
       });
     } else {
-      overlayOpacity.value = withTiming(0, {
-        duration: animation.duration.fast,
-      });
+      overlayOpacity.value = withTiming(
+        0,
+        { duration: animation.duration.fast },
+        (finished) => {
+          if (finished) runOnJS(setRendered)(false);
+        },
+      );
       translateY.value = withTiming(40, { duration: animation.duration.fast });
     }
   }, [visible, overlayOpacity, translateY]);
@@ -107,7 +121,7 @@ function Modal({
     transform: [{ translateY: translateY.value }],
   }));
 
-  if (!visible && overlayOpacity.value === 0) {
+  if (!rendered) {
     return null;
   }
 
@@ -209,8 +223,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     overflow: "hidden",
-    ...shadows.lg,
-    elevation: 24,
+    ...shadow("#0F172A", { y: 12, blur: 24, opacity: 0.12, elevation: 24 }),
   },
   handleContainer: {
     alignItems: "center",

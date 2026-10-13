@@ -1,14 +1,25 @@
-import React, { forwardRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, TextInput, StyleProp, ViewStyle } from 'react-native';
-import { Minus, Plus } from 'lucide-react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useTheme } from '../../hooks/use-theme';
-import { spacing, borderRadius, typography } from '../../constants/theme';
-import { useTranslation } from '../../i18n';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { ThemedText } from '../ui';
-import { parseCurrency, useFormatCurrency } from '../../services/currency';
-import { getCurrency } from '../../constants/currencies';
+import { Minus, Plus } from "lucide-react-native";
+import { forwardRef, useEffect, useState } from "react";
+import {
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  TextInput,
+  View,
+  ViewStyle,
+} from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { getCurrency } from "../../constants/currencies";
+import { borderRadius, spacing, typography } from "../../constants/theme";
+import { useTheme } from "../../hooks/use-theme";
+import { useTranslation } from "../../i18n";
+import { parseCurrency, useFormatCurrency } from "../../services/currency";
+import { useSettingsStore } from "../../store/useSettingsStore";
+import { ThemedText } from "../ui/themed-text";
 
 interface NumberInputProps {
   value: number; // in cents
@@ -29,35 +40,45 @@ interface NumberInputProps {
 }
 
 const NumberInput = forwardRef<TextInput, NumberInputProps>(
-  ({
-    value,
-    onChange,
-    label,
-    placeholder,
-    error,
-    disabled = false,
-    required = false,
-    min = 0,
-    max = 999999999,
-    step = 100,
-    showCurrency = true,
-    currency,
-    testID,
-    accessibilityLabel,
-    style,
-  }, ref) => {
+  (
+    {
+      value,
+      onChange,
+      label,
+      placeholder,
+      error,
+      disabled = false,
+      required = false,
+      min = 0,
+      max = 999999999,
+      step = 100,
+      showCurrency = true,
+      currency,
+      testID,
+      accessibilityLabel,
+      style,
+    },
+    ref,
+  ) => {
     const themeColors = useTheme();
     const { t } = useTranslation();
     const formatCurrency = useFormatCurrency();
-    const settingsCurrencyCode = useSettingsStore((state) => state.currencyCode);
+    const settingsCurrencyCode = useSettingsStore(
+      (state) => state.currencyCode,
+    );
     const resolvedCurrency = currency ?? settingsCurrencyCode;
     const currencySymbol = getCurrency(resolvedCurrency).symbol;
-    const resolvedPlaceholder = placeholder ?? t('common.amountPlaceholder');
-    const [inputValue, setInputValue] = useState(formatCurrency(value, { showSign: false, hideSymbol: true }));
+    const resolvedPlaceholder = placeholder ?? t("common.amountPlaceholder");
+    const [inputValue, setInputValue] = useState(
+      formatCurrency(value, { showSign: false, hideSymbol: true }),
+    );
     const [isFocused, setIsFocused] = useState(false);
     const scale = useSharedValue(1);
 
-    const formattedValue = formatCurrency(value, { showSign: false, hideSymbol: true });
+    const formattedValue = formatCurrency(value, {
+      showSign: false,
+      hideSymbol: true,
+    });
     const displayValue = isFocused ? inputValue : formattedValue;
 
     useEffect(() => {
@@ -67,13 +88,13 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
     }, [value, formattedValue, isFocused]);
 
     const handleChangeText = (text: string) => {
-      if (text === '') {
-        setInputValue('');
+      if (text === "") {
+        setInputValue("");
         onChange(0);
         return;
       }
 
-      const cleaned = text.replace(/[^\d.,-]/g, '').replace(',', '.');
+      const cleaned = text.replace(/[^\d.,-]/g, "").replace(",", ".");
       setInputValue(cleaned);
 
       const parsed = parseCurrency(cleaned);
@@ -85,27 +106,33 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
 
     const handleBlur = () => {
       setIsFocused(false);
-      const parsed = inputValue === '' ? 0 : parseCurrency(inputValue);
+      const parsed = inputValue === "" ? 0 : parseCurrency(inputValue);
       const clamped = Math.max(min, Math.min(max, parsed));
       onChange(clamped);
-      setInputValue(formatCurrency(clamped, { showSign: false, hideSymbol: true }));
+      setInputValue(
+        formatCurrency(clamped, { showSign: false, hideSymbol: true }),
+      );
     };
 
     const handleFocus = () => {
       setIsFocused(true);
-      setInputValue(value === 0 ? '' : String(value / 100));
+      setInputValue(value === 0 ? "" : String(value / 100));
     };
 
     const increment = () => {
       const newValue = Math.min(max, value + step);
       onChange(newValue);
-      setInputValue(formatCurrency(newValue, { showSign: false, hideSymbol: true }));
+      setInputValue(
+        formatCurrency(newValue, { showSign: false, hideSymbol: true }),
+      );
     };
 
     const decrement = () => {
       const newValue = Math.max(min, value - step);
       onChange(newValue);
-      setInputValue(formatCurrency(newValue, { showSign: false, hideSymbol: true }));
+      setInputValue(
+        formatCurrency(newValue, { showSign: false, hideSymbol: true }),
+      );
     };
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -133,7 +160,12 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
     return (
       <View style={style}>
         {label && (
-          <ThemedText variant="caption" weight="medium" color="secondary" style={styles.label}>
+          <ThemedText
+            variant="caption"
+            weight="medium"
+            color="secondary"
+            style={styles.label}
+          >
             {label} {required && <ThemedText color="error">*</ThemedText>}
           </ThemedText>
         )}
@@ -144,13 +176,20 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
               {
                 borderColor,
                 borderWidth: isFocused || error ? 1.5 : 1,
-                backgroundColor: disabled ? themeColors.backgroundSecondary : themeColors.surface,
+                backgroundColor: disabled
+                  ? themeColors.backgroundSecondary
+                  : themeColors.surface,
               },
             ]}
           >
             <View style={styles.amountRow}>
               {showCurrency && (
-                <ThemedText variant="caption" weight="bold" color="tertiary" style={styles.currencySymbol}>
+                <ThemedText
+                  variant="caption"
+                  weight="bold"
+                  color="tertiary"
+                  style={styles.currencySymbol}
+                >
                   {currencySymbol}
                 </ThemedText>
               )}
@@ -169,24 +208,33 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                 style={[
                   styles.input,
                   {
-                    color: disabled ? themeColors.textTertiary : themeColors.textPrimary,
+                    color: disabled
+                      ? themeColors.textTertiary
+                      : themeColors.textPrimary,
                     fontSize: typography.fontSize.xxl,
                   },
                 ]}
-                  accessibilityLabel={accessibilityLabel || label || t('common.amount')}
+                accessibilityLabel={
+                  accessibilityLabel || label || t("common.amount")
+                }
                 accessibilityState={{ disabled }}
                 accessibilityValue={{ text: formattedValue }}
                 testID={testID}
               />
             </View>
             {!disabled && (
-              <View style={[styles.stepper, { borderLeftColor: themeColors.border }]}>
+              <View
+                style={[
+                  styles.stepper,
+                  { borderLeftColor: themeColors.border },
+                ]}
+              >
                 <Pressable
                   onPress={decrement}
                   onPressIn={handlePressIn}
                   onPressOut={handlePressOut}
                   disabled={value <= min}
-                  accessibilityLabel={t('common.decrease')}
+                  accessibilityLabel={t("common.decrease")}
                   accessibilityRole="button"
                   style={[
                     styles.stepperButton,
@@ -195,14 +243,22 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                   ]}
                   hitSlop={4}
                 >
-                  <Minus size={18} strokeWidth={2.6} color={value <= min ? themeColors.textTertiary : themeColors.textPrimary} />
+                  <Minus
+                    size={18}
+                    strokeWidth={2.6}
+                    color={
+                      value <= min
+                        ? themeColors.textTertiary
+                        : themeColors.textPrimary
+                    }
+                  />
                 </Pressable>
                 <Pressable
                   onPress={increment}
                   onPressIn={handlePressIn}
                   onPressOut={handlePressOut}
                   disabled={value >= max}
-                  accessibilityLabel={t('common.increase')}
+                  accessibilityLabel={t("common.increase")}
                   accessibilityRole="button"
                   style={[
                     styles.stepperButton,
@@ -211,23 +267,36 @@ const NumberInput = forwardRef<TextInput, NumberInputProps>(
                   ]}
                   hitSlop={4}
                 >
-                  <Plus size={18} strokeWidth={2.6} color={value >= max ? themeColors.textTertiary : themeColors.textPrimary} />
+                  <Plus
+                    size={18}
+                    strokeWidth={2.6}
+                    color={
+                      value >= max
+                        ? themeColors.textTertiary
+                        : themeColors.textPrimary
+                    }
+                  />
                 </Pressable>
               </View>
             )}
           </View>
         </Animated.View>
         {error && (
-          <ThemedText variant="caption" color="error" style={styles.errorText} accessibilityLiveRegion="polite">
+          <ThemedText
+            variant="caption"
+            color="error"
+            style={styles.errorText}
+            accessibilityLiveRegion="polite"
+          >
             {error}
           </ThemedText>
         )}
       </View>
     );
-  }
+  },
 );
 
-NumberInput.displayName = 'NumberInput';
+NumberInput.displayName = "NumberInput";
 
 const styles = StyleSheet.create({
   label: {
@@ -235,8 +304,8 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     minHeight: 62,
     paddingLeft: spacing.lg,
     paddingRight: spacing.xs,
@@ -245,8 +314,8 @@ const styles = StyleSheet.create({
   },
   amountRow: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   currencySymbol: {
@@ -257,12 +326,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     paddingRight: spacing.sm,
-    fontVariant: ['tabular-nums'],
-    fontWeight: '700',
+    fontVariant: ["tabular-nums"],
+    fontWeight: "700",
     letterSpacing: -0.5,
   },
   stepper: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderLeftWidth: 1,
     gap: spacing.xs,
     paddingLeft: spacing.sm,
@@ -271,8 +340,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   stepperButtonDisabled: {
     opacity: 0.35,

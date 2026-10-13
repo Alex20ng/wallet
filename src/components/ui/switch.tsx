@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { shadow } from "../../constants/theme";
 import { useTheme } from "../../hooks/use-theme";
 
 export interface SwitchProps {
@@ -104,11 +105,7 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     backgroundColor: "#FFFFFF",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 3,
+    ...shadow("#0F172A", { y: 2, blur: 3, opacity: 0.18, elevation: 3 }),
   },
 });
 

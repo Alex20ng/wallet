@@ -1,24 +1,24 @@
 import { PublicHead } from "@/components/seo/public-head";
+import { ThemedText, ThemedView } from "@/components/ui";
+import { absoluteUrl, APP_NAME } from "@/constants/seo";
 import { borderRadius, shadows, spacing, typography } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettingsStore } from "@/store/useSettingsStore";
-import { absoluteUrl, APP_NAME } from "@/constants/seo";
 import { Image } from "expo-image";
-import { Link, Redirect } from "expo-router";
+import { Link } from "expo-router";
 import {
   ArrowRight,
   BellRing,
   ChartPie,
+  CloudOff,
+  DatabaseBackup,
   Landmark,
   Palette,
   Tags,
   TrendingUp,
-  CloudOff,
-  DatabaseBackup,
 } from "lucide-react-native";
-import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText, ThemedView } from "@/components/ui";
 
 const LOGO = require("../../assets/images/splash-icon.png");
 
@@ -106,7 +106,8 @@ const LANDING_COPY = {
       },
     ],
     appTitle: "Prêt à reprendre le contrôle sur votre argent ?",
-    footerNote: "Application gratuite et open source, développée avec React Native et Expo.",
+    footerNote:
+      "Application gratuite et open source, développée avec React Native et Expo.",
     footer: {
       app: "L'application",
       legal: "Mentions légales",
@@ -207,19 +208,16 @@ const LANDING_COPY = {
   },
 } as const;
 
-export default function LandingScreen() {
-  if (Platform.OS !== "web") {
-    return <Redirect href="/home" />;
-  }
-  return <LandingContent />;
+export default function DocsScreen() {
+  return <DocsContent />;
 }
 
-function LandingContent() {
+function DocsContent() {
   const colors = useTheme();
   const language = useSettingsStore((state) => state.language);
   const copy = LANDING_COPY[language];
 
-  const canonical = absoluteUrl("/");
+  const canonical = absoluteUrl("/docs");
 
   const jsonLd: Record<string, unknown>[] = [
     {
@@ -248,7 +246,7 @@ function LandingContent() {
       <PublicHead
         title={`${APP_NAME} — Gestion de budget et de dépenses personnelles`}
         description={copy.subtitle}
-        path="/"
+        path="/docs"
         jsonLd={jsonLd}
       />
       <ScrollView
@@ -283,11 +281,15 @@ function LandingContent() {
               >
                 {copy.title}
               </ThemedText>
-              <ThemedText variant="body" color="secondary" style={styles.subtitle}>
+              <ThemedText
+                variant="body"
+                color="secondary"
+                style={styles.subtitle}
+              >
                 {copy.subtitle}
               </ThemedText>
               <View style={styles.ctaRow}>
-                <Link href="/home" asChild>
+                <Link href="/" asChild>
                   <Pressable
                     accessibilityRole="link"
                     style={({ pressed }) => [
@@ -296,13 +298,17 @@ function LandingContent() {
                       pressed && styles.ctaPressed,
                     ]}
                   >
-                    <ThemedText variant="body" weight="semibold" color="inverse">
+                    <ThemedText
+                      variant="body"
+                      weight="semibold"
+                      color="inverse"
+                    >
                       {copy.cta}
                     </ThemedText>
                     <ArrowRight size={18} color={colors.textInverse} />
                   </Pressable>
                 </Link>
-                <Link href="/#features" asChild>
+                <Link href="/docs#features" asChild>
                   <Pressable
                     accessibilityRole="link"
                     style={({ pressed }) => [
@@ -311,7 +317,11 @@ function LandingContent() {
                       pressed && styles.ctaPressed,
                     ]}
                   >
-                    <ThemedText variant="body" weight="semibold" color="primary">
+                    <ThemedText
+                      variant="body"
+                      weight="semibold"
+                      color="primary"
+                    >
                       {copy.ctaSecondary}
                     </ThemedText>
                   </Pressable>
@@ -320,11 +330,7 @@ function LandingContent() {
             </View>
 
             {/* Features */}
-            <ThemedView
-              variant="surface"
-              style={styles.section}
-              role="region"
-            >
+            <ThemedView variant="surface" style={styles.section} role="region">
               <ThemedText
                 variant="title"
                 weight="bold"
@@ -334,7 +340,11 @@ function LandingContent() {
               >
                 {copy.featuresTitle}
               </ThemedText>
-              <ThemedText variant="body" color="secondary" style={styles.sectionSubtitle}>
+              <ThemedText
+                variant="body"
+                color="secondary"
+                style={styles.sectionSubtitle}
+              >
                 {copy.featuresSubtitle}
               </ThemedText>
               <View style={styles.featuresGrid} nativeID="features">
@@ -353,7 +363,11 @@ function LandingContent() {
                           { backgroundColor: colors.primaryLight },
                         ]}
                       >
-                        <Icon size={20} strokeWidth={2.2} color={colors.primary} />
+                        <Icon
+                          size={20}
+                          strokeWidth={2.2}
+                          color={colors.primary}
+                        />
                       </View>
                       <ThemedText
                         variant="subtitle"
@@ -384,7 +398,11 @@ function LandingContent() {
               >
                 {copy.publicTitle}
               </ThemedText>
-              <ThemedText variant="body" color="secondary" style={styles.sectionSubtitle}>
+              <ThemedText
+                variant="body"
+                color="secondary"
+                style={styles.sectionSubtitle}
+              >
                 {copy.publicText}
               </ThemedText>
             </ThemedView>
@@ -415,10 +433,14 @@ function LandingContent() {
 
           {/* Footer */}
           <View role="contentinfo" style={styles.footer}>
-            <ThemedText variant="title" weight="bold" style={styles.footerTitle}>
+            <ThemedText
+              variant="title"
+              weight="bold"
+              style={styles.footerTitle}
+            >
               {copy.appTitle}
             </ThemedText>
-            <Link href="/home" asChild>
+            <Link href="/" asChild>
               <Pressable
                 accessibilityRole="link"
                 style={({ pressed }) => [
@@ -433,7 +455,11 @@ function LandingContent() {
                 <ArrowRight size={18} color={colors.textInverse} />
               </Pressable>
             </Link>
-            <ThemedText variant="caption" color="tertiary" style={styles.footerNote}>
+            <ThemedText
+              variant="caption"
+              color="tertiary"
+              style={styles.footerNote}
+            >
               {copy.footerNote}
             </ThemedText>
             <View style={styles.footerLinks}>

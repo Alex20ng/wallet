@@ -8,7 +8,7 @@ import {
   KeyboardTypeOptions,
 } from 'react-native';
 import { useTheme } from '../../hooks/use-theme';
-import { spacing, borderRadius, typography, shadows } from '../../constants/theme';
+import { spacing, borderRadius, typography, shadow } from '../../constants/theme';
 import { ThemedText } from './themed-text';
 
 export interface InputProps {
@@ -167,12 +167,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: borderRadius.md + 2,
     minHeight: 50,
-    ...shadows.xs,
-    shadowOpacity: 0.03,
+    ...shadow('#059669', { y: 1, blur: 3, opacity: 0.03, elevation: 1 }),
   },
   focused: {
-    shadowColor: '#10B981',
-    shadowOpacity: 0.12,
+    ...shadow('#10B981', { y: 1, blur: 3, opacity: 0.12, elevation: 1 }),
   },
   input: {
     flex: 1,

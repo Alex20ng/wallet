@@ -35,7 +35,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // n'ont pas d'équivalent web fiable). Barre flottante en capsule, avec un effet
 // de verre obtenu en CSS (`backdrop-filter`), donc sans dépendance supplémentaire.
 const TABS = [
-  { name: "home", href: "/home", titleKey: "tabs.home", Icon: LayoutGrid },
+  { name: "index", href: "/", titleKey: "tabs.home", Icon: LayoutGrid },
   {
     name: "transactions",
     href: "/transactions",
@@ -124,7 +124,6 @@ function TabButton({
       accessibilityState={{ selected: isFocused }}
     >
       <Animated.View
-        pointerEvents="none"
         style={[styles.pill, { backgroundColor: pillColor }, pillStyle]}
       />
       <Animated.View style={iconStyle}>
@@ -236,6 +235,7 @@ const styles = StyleSheet.create({
     left: 4,
     right: 4,
     borderRadius: 28,
+    pointerEvents: "none",
   },
   tabLabel: {
     fontSize: 9.7,

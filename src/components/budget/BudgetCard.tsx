@@ -27,7 +27,10 @@ interface BudgetCardProps {
 
 type Status = "good" | "warning" | "over";
 
-const STATUS_KEY: Record<Status, "budgets.statusGood" | "budgets.statusWarning" | "budgets.statusOver"> = {
+const STATUS_KEY: Record<
+  Status,
+  "budgets.statusGood" | "budgets.statusWarning" | "budgets.statusOver"
+> = {
   good: "budgets.statusGood",
   warning: "budgets.statusWarning",
   over: "budgets.statusOver",
@@ -156,12 +159,12 @@ export const BudgetCard = memo(function BudgetCard({
           {/* Repère du seuil d'alerte */}
           {alertThreshold > 0 && alertThreshold < 1 && (
             <View
-              pointerEvents="none"
               style={[
                 styles.threshold,
                 {
                   left: `${alertThreshold * 100}%`,
                   backgroundColor: colors.textTertiary,
+                  pointerEvents: "none",
                 },
               ]}
             />
@@ -194,10 +197,10 @@ export const BudgetCard = memo(function BudgetCard({
         <View style={styles.alertInfo}>
           <Bell size={14} strokeWidth={2.2} color={colors.textTertiary} />
           <ThemedText variant="caption" color="tertiary">
-{t("budgets.alertAt", {
-            percent: Math.round(alertThreshold * 100),
-          })}
-        </ThemedText>
+            {t("budgets.alertAt", {
+              percent: Math.round(alertThreshold * 100),
+            })}
+          </ThemedText>
         </View>
 
         <View style={styles.actions}>
@@ -219,7 +222,9 @@ export const BudgetCard = memo(function BudgetCard({
             onPress={press(onDelete)}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel={t("budgets.deleteBudget", { name: categoryName })}
+            accessibilityLabel={t("budgets.deleteBudget", {
+              name: categoryName,
+            })}
             style={({ pressed }) => [
               styles.actionButton,
               { backgroundColor: colors.errorLight },

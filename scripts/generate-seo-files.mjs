@@ -4,13 +4,9 @@
  * URL du site (priorité) :
  *   1. EXPO_PUBLIC_SITE_URL  (variable d'environnement du build)
  *   2. VERCEL_PROJECT_PRODUCTION_URL (injectée automatiquement par Vercel)
+ *   3. DEFAULT_SITE_URL (domaine de production)
  *
- * Si aucune URL n'est disponible, le script écrit quand même un robots.txt
- * (sans Sitemap) et refuse d'inventer un domaine : sitemap.xml et llms.txt
- * ne sont pas générés, avec un avertissement explicite.
- *
- * Les fichiers sont écrits dans public/ (serveur de dev) et, si présent,
- * dans dist/ (sortie de `expo export`, utilisée par Vercel).
+ * Sitemap et llms.txt sont donc toujours générés avec une URL absolue.
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -19,12 +15,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const today = new Date().toISOString().slice(0, 10);
 
-const PUBLIC_PATHS = ["/", "/legal/terms", "/legal/privacy"];
+// Domaine de production utilisé par défaut si aucune URL n'est fournie.
+const DEFAULT_SITE_URL = "https://wallet.alex20ng.site";
+
+const PUBLIC_PATHS = ["/docs", "/legal/terms", "/legal/privacy"];
 
 // Chemins privés (données financières de l'utilisateur) à exclure de
 // l'indexation. Ils sont par ailleurs marqués noindex dans le HTML généré.
 const DISALLOWED_PATHS = [
-  "/home",
   "/transactions",
   "/categories",
   "/budgets",
@@ -38,15 +36,11 @@ function resolveSiteUrl() {
   if (explicit) return explicit.replace(/\/+$/, "");
   const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
   if (vercelUrl) return `https://${vercelUrl}`;
-  return "";
+  return DEFAULT_SITE_URL;
 }
 
 function logInfo(message) {
   console.log(`[generate-seo] ${message}`);
-}
-
-function logWarn(message) {
-  console.warn(`[generate-seo] AVERTISSEMENT : ${message}`);
 }
 
 function write(targets, name, content) {
@@ -76,25 +70,12 @@ function main() {
 
   write(targets, "robots.txt", robots);
 
-  if (!siteUrl) {
-    logWarn(
-      "Aucune URL de site (EXPO_PUBLIC_SITE_URL ou VERCEL_PROJECT_PRODUCTION_URL) " +
-        "n'est définie : sitemap.xml et llms.txt ne sont pas générés pour éviter " +
-        "d'utiliser un domaine inventé."
-    );
-    logInfo(
-      "Conseil : définir EXPO_PUBLIC_SITE_URL dans le tableau de bord Vercel " +
-        "(ex. https://wallet.alex20ng.com), puis reconstruire."
-    );
-    return;
-  }
-
   const sitemap = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ...PUBLIC_PATHS.map(
       (p) =>
-        `  <url><loc>${siteUrl}${p === "/" ? "" : p}</loc><lastmod>${today}</lastmod></url>`
+        `  <url><loc>${siteUrl}${p === "/" ? "" : p}</loc><lastmod>${today}</lastmod></url>`,
     ),
     "</urlset>",
     "",
@@ -119,10 +100,10 @@ function main() {
     "",
     "## Liens",
     "",
-    `- [Page d'accueil](${siteUrl}/)`,
+    `- [Présentation](${siteUrl}/docs)`,
     `- [Conditions d'utilisation](${siteUrl}/legal/terms)`,
     `- [Politique de confidentialité](${siteUrl}/legal/privacy)`,
-    "- [Ouvrir l'application](/home)",
+    "- [Ouvrir l'application](/)",
     "",
   ].join("\n");
 
