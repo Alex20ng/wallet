@@ -1,24 +1,26 @@
 import { PageHeader, Screen } from "@/components/layout";
+import { NoIndexHead } from "@/components/seo/public-head";
 import { Button, ThemedText, ThemedView } from "@/components/ui";
 import { getCategoryIcon } from "@/constants/category-icons";
 import { borderRadius, gradients, shadows, spacing } from "@/constants/theme";
+import { useCategoryName } from "@/hooks/use-category-name";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
 import { useFormatCurrency, useFormatDate } from "@/services/currency";
 import { useAppStore } from "@/store/useAppStore";
+import { alert } from "@/utils/alert";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { Calendar, Clock, FileText, Pencil, Tag } from "lucide-react-native";
-import { NoIndexHead } from "@/components/seo/public-head";
 import React, { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { alert } from "@/utils/alert";
 
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useTheme();
   const { t } = useTranslation();
+  const categoryName = useCategoryName();
   const formatCurrency = useFormatCurrency();
   const formatDate = useFormatDate();
 
@@ -69,7 +71,10 @@ export default function TransactionDetailScreen() {
     return (
       <Screen safeAreaEdges={["top", "bottom"]}>
         <NoIndexHead />
-        <PageHeader title={t("transaction.title")} onBack={() => router.back()} />
+        <PageHeader
+          title={t("transaction.title")}
+          onBack={() => router.back()}
+        />
         <ThemedText variant="body" color="tertiary" style={styles.loading}>
           {t("common.loading")}
         </ThemedText>
@@ -90,132 +95,142 @@ export default function TransactionDetailScreen() {
     <>
       <NoIndexHead />
       <Screen>
-      <PageHeader
-        title={t("transaction.title")}
-        subtitle={isExpense ? t("common.expense") : t("common.income")}
-        onBack={() => router.back()}
-        rightAction={
-          <Pressable
-            onPress={handleEdit}
-            style={[
-              styles.headerAction,
-              { backgroundColor: colors.primaryLight },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t("transaction.edit")}
-            hitSlop={8}
-          >
-            <Pencil size={18} strokeWidth={2.3} color={colors.primary} />
-          </Pressable>
-        }
-      />
-
-      {/* Amount hero */}
-      <LinearGradient
-        colors={[...(isExpense ? gradients.danger : gradients.success)]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
-      >
-        <View style={styles.heroBadge}>
-          <ThemedText
-            variant="caption"
-            weight="bold"
-            style={styles.heroBadgeText}
-          >
-            {isExpense ? t("common.expense").toUpperCase() : t("common.income").toUpperCase()}
-          </ThemedText>
-        </View>
-        <ThemedText style={styles.heroAmount}>
-          {isExpense ? "-" : "+"}
-          {formatCurrency(transaction.amount)}
-        </ThemedText>
-        <HeroCategoryPill
-          icon={category?.icon}
-          name={category?.name || t("common.unknownCategory")}
-        />
-      </LinearGradient>
-
-      {/* Details */}
-      <ThemedView variant="surface" style={styles.detailsCard}>
-        <DetailRow
-          icon={<Calendar size={17} strokeWidth={2.3} color={colors.primary} />}
-          label={t("common.date")}
-          value={formatDate(transaction.date, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        />
-        {transaction.note ? (
-          <DetailRow
-            icon={
-              <FileText size={17} strokeWidth={2.3} color={colors.primary} />
-            }
-            label={t("common.note")}
-            value={transaction.note}
-          />
-        ) : null}
-        <DetailRow
-          icon={<Tag size={17} strokeWidth={2.3} color={colors.primary} />}
-          label={t("common.category")}
-          value={
-            category
-              ? `${category.name} · ${category.type === "income"
-                  ? t("common.income")
-                  : category.type === "both"
-                    ? t("common.both")
-                    : t("common.expense")}`
-              : t("common.unknown")
+        <PageHeader
+          title={t("transaction.title")}
+          subtitle={isExpense ? t("common.expense") : t("common.income")}
+          onBack={() => router.back()}
+          rightAction={
+            <Pressable
+              onPress={handleEdit}
+              style={[
+                styles.headerAction,
+                { backgroundColor: colors.primaryLight },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("transaction.edit")}
+              hitSlop={8}
+            >
+              <Pencil size={18} strokeWidth={2.3} color={colors.primary} />
+            </Pressable>
           }
         />
-        <DetailRow
-          icon={<Clock size={17} strokeWidth={2.3} color={colors.primary} />}
-          label={t("transaction.createdAt")}
-          value={formatDate(transaction.createdAt, {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-          isLast={transaction.updatedAt === transaction.createdAt}
-        />
-        {transaction.updatedAt !== transaction.createdAt && (
+
+        {/* Amount hero */}
+        <LinearGradient
+          colors={[...(isExpense ? gradients.danger : gradients.success)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroBadge}>
+            <ThemedText
+              variant="caption"
+              weight="bold"
+              style={styles.heroBadgeText}
+            >
+              {isExpense
+                ? t("common.expense").toUpperCase()
+                : t("common.income").toUpperCase()}
+            </ThemedText>
+          </View>
+          <ThemedText style={styles.heroAmount}>
+            {isExpense ? "-" : "+"}
+            {formatCurrency(transaction.amount)}
+          </ThemedText>
+          <HeroCategoryPill
+            icon={category?.icon}
+            name={
+              category ? categoryName(category) : t("common.unknownCategory")
+            }
+          />
+        </LinearGradient>
+
+        {/* Details */}
+        <ThemedView variant="surface" style={styles.detailsCard}>
           <DetailRow
-            icon={<Clock size={17} strokeWidth={2.3} color={colors.warning} />}
-            label={t("transaction.updatedAt")}
-            value={formatDate(transaction.updatedAt, {
+            icon={
+              <Calendar size={17} strokeWidth={2.3} color={colors.primary} />
+            }
+            label={t("common.date")}
+            value={formatDate(transaction.date, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          />
+          {transaction.note ? (
+            <DetailRow
+              icon={
+                <FileText size={17} strokeWidth={2.3} color={colors.primary} />
+              }
+              label={t("common.note")}
+              value={transaction.note}
+            />
+          ) : null}
+          <DetailRow
+            icon={<Tag size={17} strokeWidth={2.3} color={colors.primary} />}
+            label={t("common.category")}
+            value={
+              category
+                ? `${categoryName(category)} · ${
+                    category.type === "income"
+                      ? t("common.income")
+                      : category.type === "both"
+                        ? t("common.both")
+                        : t("common.expense")
+                  }`
+                : t("common.unknown")
+            }
+          />
+          <DetailRow
+            icon={<Clock size={17} strokeWidth={2.3} color={colors.primary} />}
+            label={t("transaction.createdAt")}
+            value={formatDate(transaction.createdAt, {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
               hour: "2-digit",
               minute: "2-digit",
             })}
-            isLast
+            isLast={transaction.updatedAt === transaction.createdAt}
           />
-        )}
-      </ThemedView>
+          {transaction.updatedAt !== transaction.createdAt && (
+            <DetailRow
+              icon={
+                <Clock size={17} strokeWidth={2.3} color={colors.warning} />
+              }
+              label={t("transaction.updatedAt")}
+              value={formatDate(transaction.updatedAt, {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              isLast
+            />
+          )}
+        </ThemedView>
 
-      {/* Actions */}
-      <View style={styles.actions}>
-        <Button
-          title={t("transaction.edit")}
-          onPress={handleEdit}
-          variant="outline"
-          size="md"
-          fullWidth
-        />
-        <Button
-          title={t("common.delete")}
-          onPress={confirmDelete}
-          variant="danger"
-          size="md"
-          fullWidth
-        />
-      </View>
-    </Screen>
+        {/* Actions */}
+        <View style={styles.actions}>
+          <Button
+            title={t("transaction.edit")}
+            onPress={handleEdit}
+            variant="outline"
+            size="md"
+            fullWidth
+          />
+          <Button
+            title={t("common.delete")}
+            onPress={confirmDelete}
+            variant="danger"
+            size="md"
+            fullWidth
+          />
+        </View>
+      </Screen>
     </>
   );
 }

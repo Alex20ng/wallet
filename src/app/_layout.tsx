@@ -45,7 +45,10 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
-        runMigrations();
+        // Sur web, runMigrations() renvoie une promesse (chargement IndexedDB) :
+        // on doit l'attendre avant de monter la navigation, sinon les premières
+        // requêtes échouent avec "Base web non initialisée".
+        await runMigrations();
         await loadThemePreference();
         await NotificationService.configure();
         const prefs = await notificationPreferences.getPreferences();

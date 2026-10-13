@@ -154,6 +154,22 @@ const fr = {
   "categories.deleteMessage":
     "Voulez-vous supprimer « {name} » ? Les transactions associées ne seront pas supprimées.",
 
+  // Noms des catégories par défaut (traduites à l'affichage tant que
+  // l'utilisateur ne les a pas renommées : le nom stocké reste l'original)
+  "defaultCategory.food": "Alimentation",
+  "defaultCategory.transport": "Transport",
+  "defaultCategory.shopping": "Shopping",
+  "defaultCategory.entertainment": "Loisirs",
+  "defaultCategory.bills": "Factures",
+  "defaultCategory.health": "Santé",
+  "defaultCategory.education": "Éducation",
+  "defaultCategory.otherExpense": "Autres",
+  "defaultCategory.salary": "Salaire",
+  "defaultCategory.freelance": "Freelance",
+  "defaultCategory.investments": "Investissements",
+  "defaultCategory.gifts": "Cadeaux",
+  "defaultCategory.otherIncome": "Autres",
+
   // Budgets
   "budgets.title": "Budgets",
   "budgets.create": "Créer un budget",
@@ -503,6 +519,22 @@ const en: Record<TranslationKey, string> = {
   "categories.deleteTitle": "Delete category",
   "categories.deleteMessage":
     "Do you want to delete “{name}”? Associated transactions will not be deleted.",
+
+  // Default category names (kept translatable at display time, the stored
+  // name stays the original until the user renames the category)
+  "defaultCategory.food": "Food & Dining",
+  "defaultCategory.transport": "Transportation",
+  "defaultCategory.shopping": "Shopping",
+  "defaultCategory.entertainment": "Entertainment",
+  "defaultCategory.bills": "Bills & Utilities",
+  "defaultCategory.health": "Healthcare",
+  "defaultCategory.education": "Education",
+  "defaultCategory.otherExpense": "Other",
+  "defaultCategory.salary": "Salary",
+  "defaultCategory.freelance": "Freelance",
+  "defaultCategory.investments": "Investments",
+  "defaultCategory.gifts": "Gifts",
+  "defaultCategory.otherIncome": "Other",
 
   // Budgets
   "budgets.title": "Budgets",

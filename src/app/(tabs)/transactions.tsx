@@ -2,14 +2,13 @@ import { EmptyState, Screen, TransactionItem } from "@/components/layout";
 import { Modal, Select, ThemedText, ThemedView } from "@/components/ui";
 import FloatingActionButton from "@/components/ui/floatingActionButton";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
+import { useCategoryName } from "@/hooks/use-category-name";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
-import {
-  usePeriodPresets,
-  usePeriodShortLabel,
-} from "@/services/currency";
+import { usePeriodPresets, usePeriodShortLabel } from "@/services/currency";
 import { useAppStore } from "@/store/useAppStore";
+import type { Category } from "@/types";
 import { FlashList } from "@shopify/flash-list";
 import { router, useFocusEffect } from "expo-router";
 import { ListFilter, X } from "lucide-react-native";
@@ -39,6 +38,7 @@ export default function TransactionsScreen() {
 
   const colors = useTheme();
   const { t, tp } = useTranslation();
+  const categoryName = useCategoryName();
   const getPeriodPresets = usePeriodPresets();
   const getPeriodShortLabel = usePeriodShortLabel();
   const [showFilters, setShowFilters] = React.useState(false);
@@ -195,7 +195,7 @@ export default function TransactionsScreen() {
             return cat ? (
               <FilterChip
                 key={id}
-                label={cat.name}
+                label={categoryName(cat)}
                 color={cat.color}
                 onRemove={() => {
                   haptics.impact(haptics.ImpactFeedbackStyle.Light);
@@ -367,11 +367,12 @@ function CategoryFilterChips({
   selectedIds,
   onToggle,
 }: {
-  categories: { id: string; name: string; color: string }[];
+  categories: Pick<Category, "id" | "name" | "color" | "isDefault">[];
   selectedIds: string[];
   onToggle: (id: string) => void;
 }) {
   const colors = useTheme();
+  const categoryName = useCategoryName();
   return (
     <View style={styles.chipContainer}>
       {categories.map((cat) => {
@@ -395,7 +396,7 @@ function CategoryFilterChips({
               weight={selected ? "bold" : "medium"}
               color={selected ? "inverse" : "primary"}
             >
-              {cat.name}
+              {categoryName(cat)}
             </ThemedText>
           </Pressable>
         );

@@ -9,6 +9,7 @@ import {
   ThemedView,
 } from "@/components/ui";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
+import { useCategoryName } from "@/hooks/use-category-name";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
@@ -16,17 +17,12 @@ import { useFormatCurrency } from "@/services/currency";
 import { endOfMonth, startOfMonth, useMonthOptions } from "@/services/date";
 import { useAppStore } from "@/store/useAppStore";
 import type { Budget, Category } from "@/types";
+import { alert } from "@/utils/alert";
 import NativeSlider from "@react-native-community/slider";
 import { useFocusEffect } from "expo-router";
 import { Plus } from "lucide-react-native";
 import React, { useCallback, useMemo } from "react";
-import {
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  View,
-} from "react-native";
-import { alert } from "@/utils/alert";
+import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 export default function BudgetsScreen() {
   const {
@@ -41,6 +37,7 @@ export default function BudgetsScreen() {
 
   const colors = useTheme();
   const { t } = useTranslation();
+  const categoryName = useCategoryName();
   const formatCurrency = useFormatCurrency();
   const getMonthOptions = useMonthOptions();
   const [selectedMonth, setSelectedMonth] = React.useState(() => {
@@ -141,8 +138,7 @@ export default function BudgetsScreen() {
     const newErrors: Record<string, string> = {};
     if (!formData.categoryId)
       newErrors.category = t("validation.selectCategory");
-    if (formData.amount <= 0)
-      newErrors.amount = t("validation.amountPositive");
+    if (formData.amount <= 0) newErrors.amount = t("validation.amountPositive");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -234,9 +230,7 @@ export default function BudgetsScreen() {
         {/* Restant : l'information principale */}
         <View style={styles.summaryHero}>
           <ThemedText variant="caption" color="tertiary">
-            {remaining < 0
-              ? t("budgets.over")
-              : t("budgets.remainingToSpend")}
+            {remaining < 0 ? t("budgets.over") : t("budgets.remainingToSpend")}
           </ThemedText>
           <ThemedText
             variant="headline"
@@ -326,9 +320,9 @@ export default function BudgetsScreen() {
             spent={spent}
             budget={budget.amount}
             alertThreshold={budget.alertThreshold}
-            categoryName={category!.name}
             categoryColor={category!.color}
             categoryIcon={category!.icon}
+            categoryName={categoryName(category)}
             onEdit={() => handleEdit({ budget, category })}
             onDelete={() => handleDelete(budget)}
           />
@@ -351,7 +345,7 @@ export default function BudgetsScreen() {
             }
             options={expenseCategories.map((c) => ({
               value: c.id,
-              label: c.name,
+              label: categoryName(c),
               color: c.color,
             }))}
             placeholder={t("common.chooseCategory")}

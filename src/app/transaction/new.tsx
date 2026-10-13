@@ -10,6 +10,7 @@ import {
 } from "@/components/ui";
 import { borderRadius, shadow, spacing } from "@/constants/theme";
 import { useBudgetAlerts } from "@/hooks/alerts/useBudgetAlerts";
+import { useCategoryName } from "@/hooks/use-category-name";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
@@ -31,6 +32,7 @@ export default function TransactionFormScreen() {
   const isEditing = Boolean(id);
   const colors = useTheme();
   const { t } = useTranslation();
+  const categoryName = useCategoryName();
 
   const {
     loadCategories,
@@ -147,7 +149,7 @@ export default function TransactionFormScreen() {
                 .reduce((sum, t) => sum + t.amount, 0) + amount;
             await budgetAlerts.checkBudget({
               categoryId: budget.categoryId,
-              categoryName: cat?.name,
+              categoryName: cat ? categoryName(cat) : undefined,
               budget: budget.amount,
               spent: spentSoFar,
               periodStart: start,
@@ -321,7 +323,7 @@ export default function TransactionFormScreen() {
             onChange={setCategoryId}
             options={availableCategories.map((c) => ({
               value: c.id,
-              label: c.name,
+              label: categoryName(c),
               color: c.color,
             }))}
             placeholder={t("common.chooseCategory")}

@@ -5,11 +5,13 @@ import {
   CATEGORY_ICON_NAMES,
 } from "@/constants/category-icons";
 import { borderRadius, spacing } from "@/constants/theme";
+import { getLocalizedCategoryName } from "@/hooks/use-category-name";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
 import { useAppStore } from "@/store/useAppStore";
 import type { Category } from "@/types";
+import { alert } from "@/utils/alert";
 import {
   BottomSheetBackdrop,
   BottomSheetFooter,
@@ -35,7 +37,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { alert } from "@/utils/alert";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BottomSheetTextInput =
@@ -103,7 +104,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
         if (category) {
           setEditingCategory(category);
           setFormData({
-            name: category.name,
+            name: getLocalizedCategoryName(category) ?? category.name,
             icon: category.icon,
             color: category.color,
             type: category.type,
@@ -156,13 +157,23 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
         await haptics.notification(haptics.NotificationFeedbackType.Error);
         setErrors({ submit: t("errors.save") });
       }
-    }, [addCategory, editingCategory, formData, t, updateCategory, validateForm]);
+    }, [
+      addCategory,
+      editingCategory,
+      formData,
+      t,
+      updateCategory,
+      validateForm,
+    ]);
 
     const handleDelete = useCallback(() => {
       if (!editingCategory) return;
       alert(
         t("categories.deleteTitle"),
-        t("categories.deleteMessage", { name: editingCategory.name }),
+        t("categories.deleteMessage", {
+          name:
+            getLocalizedCategoryName(editingCategory) ?? editingCategory.name,
+        }),
         [
           { text: t("common.cancel"), style: "cancel" },
           {
@@ -490,7 +501,9 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
                             }
                             accessibilityRole="button"
                             accessibilityState={{ selected }}
-                            accessibilityLabel={t("common.colorLabel", { color })}
+                            accessibilityLabel={t("common.colorLabel", {
+                              color,
+                            })}
                             style={[
                               styles.colorItem,
                               { width: colorItemSize, height: colorItemSize },

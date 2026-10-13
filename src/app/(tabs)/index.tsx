@@ -7,6 +7,7 @@ import { EmptyState, Screen, TransactionItem } from "@/components/layout";
 import { ThemedText, ThemedView } from "@/components/ui";
 import CategoryLegend from "@/components/ui/categoryLegend";
 import { borderRadius, gradients, shadow, spacing } from "@/constants/theme";
+import { useCategoryName } from "@/hooks/use-category-name";
 import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
 import { useTranslation } from "@/i18n";
@@ -36,6 +37,7 @@ export default function DashboardScreen() {
     refreshData,
     dashboardStats,
     transactions,
+    categories,
     monthBudgetItems,
     selectedPeriod,
     setPeriod,
@@ -44,6 +46,7 @@ export default function DashboardScreen() {
 
   const colors = useTheme();
   const { t } = useTranslation();
+  const categoryName = useCategoryName();
   const formatCurrency = useFormatCurrency();
   const formatDate = useFormatDate();
   const getPeriodPresets = usePeriodPresets();
@@ -268,11 +271,14 @@ export default function DashboardScreen() {
   const totalExpense = dashboardStats?.totalExpense || 0;
   const balance = dashboardStats?.balance || 0;
 
-  const pieChartData = (dashboardStats?.expenseByCategory || []).map((c) => ({
-    name: c.categoryName,
-    value: c.amount,
-    color: c.categoryColor,
-  }));
+  const pieChartData = (dashboardStats?.expenseByCategory || []).map((c) => {
+    const category = categories.find((cat) => cat.id === c.categoryId);
+    return {
+      name: category ? categoryName(category) : c.categoryName,
+      value: c.amount,
+      color: c.categoryColor,
+    };
+  });
 
   const trendData = (dashboardStats?.dailyTrend || []).map((d) => ({
     label: d.date,
@@ -497,7 +503,7 @@ export default function DashboardScreen() {
                     key={budget.id}
                     spent={spent}
                     budget={budget.amount}
-                    categoryName={category.name}
+                    categoryName={categoryName(category)}
                     categoryColor={category.color}
                   />
                 ) : null,

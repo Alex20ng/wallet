@@ -8,6 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { getCategoryIcon } from "../../constants/category-icons";
 import { borderRadius, shadow, spacing } from "../../constants/theme";
+import { useCategoryName } from "../../hooks/use-category-name";
 import { useTheme } from "../../hooks/use-theme";
 import type { Category } from "../../types";
 import { ThemedText } from "../ui";
@@ -24,8 +25,10 @@ const CategoryItem = memo(function CategoryItem({
   onPress,
 }: CategoryItemProps) {
   const colors = useTheme();
+  const categoryName = useCategoryName();
   const pressScale = useSharedValue(1);
   const Icon = getCategoryIcon(category.icon);
+  const label = categoryName(category);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
@@ -55,7 +58,7 @@ const CategoryItem = memo(function CategoryItem({
         ]}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected }}
-        accessibilityLabel={category.name}
+        accessibilityLabel={label}
         android_ripple={{ color: category.color + "26" }}
       >
         <View
@@ -81,7 +84,7 @@ const CategoryItem = memo(function CategoryItem({
           numberOfLines={2}
           style={styles.name}
         >
-          {category.name}
+          {label}
         </ThemedText>
         {isSelected && (
           <View style={[styles.checkmark, { backgroundColor: category.color }]}>
