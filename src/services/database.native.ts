@@ -22,6 +22,10 @@ export function executeMigration(sql: string): void {
   db.execSync(sql);
 }
 
+// Les écritures SQLite sont synchrones : rien à attendre. Garde le même
+// contrat que la version web (Promise<void> | void) pour `await flushWrites()`.
+export function flushWrites(): void {}
+
 export function runMigrations(): void {
   const db = getDatabase();
 

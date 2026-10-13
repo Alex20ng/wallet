@@ -6,6 +6,7 @@ import { translate } from '../i18n';
 import { getPeriodRange } from '../services/currency';
 import { endOfMonth, startOfMonth } from '../services/date';
 import { categoryRepository, transactionRepository, budgetRepository } from '../repositories';
+import { flushWrites } from '../services/database';
 
 export interface BudgetItem {
   budget: Budget;
@@ -137,6 +138,10 @@ export const useAppStore = create<AppState>()(
        * L'ordre importe : les catégories d'abord, car les budgets en dérivent.
        */
       refreshData: async () => {
+        // Attend la persistance des écritures en cours (natif : no-op, web :
+        // IndexedDB). Garantit qu'une suppression sur le web ne « revient »
+        // pas après rechargement de la page.
+        await flushWrites();
         await get().loadCategories();
         await get().loadDashboardStats();
         await get().loadTransactions();
@@ -274,8 +279,11 @@ export const useAppStore = create<AppState>()(
           const result = transactionRepository.delete(id);
           if (result) {
             await get().refreshData();
+            return result;
           }
-          return result;
+          // Aucune ligne supprimée : on remonte une erreur plutôt que
+          // d'échouer silencieusement (l'écran garderait alors la dépense).
+          throw new Error(translate('errors.deleteTransaction'));
         } catch (error) {
           set({ error: translate('errors.deleteTransaction') });
           throw error;

@@ -328,6 +328,11 @@ class WebWalletDB implements WalletDatabase {
     this.readyPromise = null;
     this.tables = { categories: [], transactions: [], budgets: [] };
   }
+
+  /** Attend la persistance IndexedDB de toutes les écritures en cours. */
+  flushWrites(): Promise<void> {
+    return this.writeQueue;
+  }
 }
 
 const webDb = new WebWalletDB();
@@ -342,4 +347,8 @@ export function closeDatabase(): void {
 
 export function runMigrations(): Promise<void> {
   return webDb.ready();
+}
+
+export function flushWrites(): Promise<void> {
+  return webDb.flushWrites();
 }

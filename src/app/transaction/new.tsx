@@ -211,18 +211,7 @@ export default function TransactionFormScreen() {
               <Pressable
                 onPress={() => {
                   haptics.impact(haptics.ImpactFeedbackStyle.Medium);
-                  alert(
-                    t("transaction.deleteTitle"),
-                    t("transaction.deleteMessage"),
-                    [
-                      { text: t("common.cancel"), style: "cancel" },
-                      {
-                        text: t("common.delete"),
-                        style: "destructive",
-                        onPress: handleDelete,
-                      },
-                    ],
-                  );
+                  handleDelete();
                 }}
                 style={[
                   styles.headerAction,
