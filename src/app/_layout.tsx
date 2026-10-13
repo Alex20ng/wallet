@@ -1,6 +1,7 @@
 import "../global.css";
 
 import { Providers } from "@/components/providers";
+import { PublicHead } from "@/components/seo/public-head";
 import { AnimatedSplash } from "@/components/splash/AnimatedSplash";
 import { ThemedView } from "@/components/ui/themed-view";
 import VercelAnalytics from "@/components/VercelAnalytics";
@@ -10,7 +11,6 @@ import { NotificationService } from "@/services/notifications/NotificationServic
 import { notificationPreferences } from "@/storage/notificationPreferences";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack, usePathname } from "expo-router";
-import Head from "expo-router/head";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
@@ -45,7 +45,7 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
-        await runMigrations();
+        runMigrations();
         await loadThemePreference();
         await NotificationService.configure();
         const prefs = await notificationPreferences.getPreferences();
@@ -73,9 +73,12 @@ export default function RootLayout() {
           <Providers>
             <ThemedView style={{ flex: 1 }}>
               {!isIndexableRoute(pathname) ? (
-                <Head>
-                  <meta name="robots" content="noindex,nofollow" />
-                </Head>
+                <PublicHead
+                  title="Wallet — Gestion de budget et de dépenses personnelles"
+                  description="Suivez vos dépenses, vos revenus et vos budgets. 100 % hors ligne, sans compte, vos données restent sur votre appareil."
+                  path="/"
+                  robots="noindex,nofollow"
+                />
               ) : null}
               {renderNavigator ? (
                 <Stack
