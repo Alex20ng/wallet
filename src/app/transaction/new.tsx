@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Alert, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { alert } from '@/utils/alert';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowDownRight, ArrowUpRight, Trash } from 'lucide-react-native';
 import { haptics } from '@/hooks/use-haptics';
@@ -117,7 +118,7 @@ export default function TransactionFormScreen() {
   const handleDelete = async () => {
     if (!isEditing || !id) return;
 
-    Alert.alert(
+    alert(
       t('transaction.deleteTitle'),
       t('transaction.deleteMessage'),
       [
@@ -153,7 +154,7 @@ export default function TransactionFormScreen() {
             <Pressable
               onPress={() => {
                 haptics.impact(haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
+                alert(
                   t('transaction.deleteTitle'),
                   t('transaction.deleteMessage'),
                   [

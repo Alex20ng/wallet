@@ -11,7 +11,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { Calendar, Clock, FileText, Pencil, Tag } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { alert } from "@/utils/alert";
 
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,7 +49,7 @@ export default function TransactionDetailScreen() {
 
   // Alerte système : Liquid Glass sur iOS 26, boîte de dialogue Material sur Android
   const confirmDelete = () => {
-    Alert.alert(
+    alert(
       t("transaction.deleteTitle"),
       t("transaction.deleteMessageDetail"),
       [

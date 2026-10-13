@@ -1,15 +1,12 @@
 import * as SQLite from "expo-sqlite";
-import { migrations } from "./migrations";
+import { migrations } from "../database/migrations";
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
-const DATABASE_NAME = "wallet.db";
-
 export function getDatabase(): SQLite.SQLiteDatabase {
   if (!dbInstance) {
-    dbInstance = SQLite.openDatabaseSync(DATABASE_NAME);
+    dbInstance = SQLite.openDatabaseSync("wallet.db");
   }
-
   return dbInstance;
 }
 
@@ -20,22 +17,19 @@ export function closeDatabase(): void {
   }
 }
 
-function getDatabaseVersion(db: SQLite.SQLiteDatabase): number {
-  const result = db.getFirstSync<{ user_version: number }>(
-    "PRAGMA user_version;",
-  );
-
-  return result?.user_version ?? 0;
-}
-
-function setDatabaseVersion(db: SQLite.SQLiteDatabase, version: number): void {
-  db.execSync(`PRAGMA user_version = ${version};`);
+export function executeMigration(sql: string): void {
+  const db = getDatabase();
+  db.execSync(sql);
 }
 
 export function runMigrations(): void {
   const db = getDatabase();
 
-  const currentVersion = getDatabaseVersion(db);
+  const result = db.getFirstSync<{ user_version: number }>(
+    "PRAGMA user_version;",
+  );
+
+  const currentVersion = result?.user_version ?? 0;
 
   const migrationVersions = Object.keys(migrations)
     .map(Number)
@@ -59,7 +53,7 @@ export function runMigrations(): void {
 
       db.execSync(migration);
 
-      setDatabaseVersion(db, version);
+      db.execSync(`PRAGMA user_version = ${version};`);
     }
   });
 }

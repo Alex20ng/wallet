@@ -62,7 +62,8 @@ const fr = {
   "errors.saveBudget": "Erreur lors de la sauvegarde du budget",
   "errors.loadData": "Erreur lors du chargement des données",
   "errors.createTransaction": "Erreur lors de la création de la transaction",
-  "errors.updateTransaction": "Erreur lors de la modification de la transaction",
+  "errors.updateTransaction":
+    "Erreur lors de la modification de la transaction",
   "errors.deleteTransaction": "Erreur lors de la suppression de la transaction",
   "errors.createCategory": "Erreur lors de la création de la catégorie",
   "errors.updateCategory": "Erreur lors de la modification de la catégorie",
@@ -194,8 +195,7 @@ const fr = {
   "settings.format": "Format : {locale}",
   "settings.notifications": "Notifications",
   "settings.enableNotifications": "Activer les notifications",
-  "settings.allowLocalNotifications":
-    "Autoriser les notifications locales",
+  "settings.allowLocalNotifications": "Autoriser les notifications locales",
   "settings.budgetAlerts": "Alertes de dépassement de budget",
   "settings.budgetAlertsDesc": "Avertissements et alertes selon vos seuils",
   "settings.dailyReminder": "Rappel quotidien de saisie",
@@ -214,6 +214,13 @@ const fr = {
   "settings.termsDesc": "Lire nos conditions d'utilisation",
   "settings.privacy": "Politique de confidentialité",
   "settings.privacyDesc": "Vos données restent sur votre appareil",
+  "settings.data": "Données",
+  "settings.exportJson": "Exporter une sauvegarde (JSON)",
+  "settings.exportJsonDesc": "Catégories, transactions et budgets",
+  "settings.exportCsv": "Exporter les transactions (CSV)",
+  "settings.exportCsvDesc": "Format tableur (Excel, Numbers…)",
+  "settings.importData": "Importer un fichier",
+  "settings.importDataDesc": "Restaurer un JSON ou importer un CSV",
   "settings.french": "Français",
   "settings.english": "Anglais",
 
@@ -224,8 +231,7 @@ const fr = {
 
   // Notifications
   "notifications.channelName": "Alertes budgétaires",
-  "notifications.channelDescription":
-    "Notifications d'alerte pour vos budgets",
+  "notifications.channelDescription": "Notifications d'alerte pour vos budgets",
   "notifications.dailyTitle": "Enregistrez vos dépenses",
   "notifications.dailyBody":
     "Avez-vous eu des dépenses aujourd'hui ? Enregistrez-les en 5 secondes.",
@@ -269,6 +275,27 @@ const fr = {
   "export.colAlertThreshold": "Seuil alerte",
   "export.colPeriodStart": "Période début",
   "export.colPeriodEnd": "Période fin",
+  "export.successTitle": "Export réussi",
+  "export.successMessage": "Le fichier a été enregistré.",
+  "export.errorTitle": "Échec de l'export",
+  "export.errorMessage": "Le fichier n'a pas pu être généré.",
+  "export.emptyTransactions": "Aucune transaction à exporter.",
+
+  // Import
+  "import.title": "Importer des données",
+  "import.modeMessage":
+    "Comment intégrer ce fichier à vos données existantes ?",
+  "import.merge": "Fusionner",
+  "import.replace": "Remplacer",
+  "import.mergeConfirmMessage":
+    "Ajouter le contenu du fichier à vos données existantes ?",
+  "import.replaceConfirmMessage":
+    "Écraser TOUTES vos données par le contenu du fichier ? Action irréversible.",
+  "import.successTitle": "Import terminé",
+  "import.successMessage":
+    "{categories} catégorie(s), {transactions} transaction(s), {budgets} budget(s)",
+  "import.errorTitle": "Échec de l'import",
+  "import.errorMessage": "Fichier invalide ou illisible.",
 
   // Legal — shared
   "legal.lastUpdated": "Dernière mise à jour : {date}",
@@ -536,6 +563,13 @@ const en: Record<TranslationKey, string> = {
   "settings.termsDesc": "Read our terms of use",
   "settings.privacy": "Privacy policy",
   "settings.privacyDesc": "Your data stays on your device",
+  "settings.data": "Data",
+  "settings.exportJson": "Export a backup (JSON)",
+  "settings.exportJsonDesc": "Categories, transactions and budgets",
+  "settings.exportCsv": "Export transactions (CSV)",
+  "settings.exportCsvDesc": "Spreadsheet format (Excel, Numbers…)",
+  "settings.importData": "Import a file",
+  "settings.importDataDesc": "Restore a JSON backup or import a CSV",
   "settings.french": "French",
   "settings.english": "English",
 
@@ -590,6 +624,26 @@ const en: Record<TranslationKey, string> = {
   "export.colAlertThreshold": "Alert threshold",
   "export.colPeriodStart": "Period start",
   "export.colPeriodEnd": "Period end",
+  "export.successTitle": "Export complete",
+  "export.successMessage": "The file has been saved.",
+  "export.errorTitle": "Export failed",
+  "export.errorMessage": "The file could not be generated.",
+  "export.emptyTransactions": "There are no transactions to export.",
+
+  // Import
+  "import.title": "Import data",
+  "import.modeMessage":
+    "How should this file be merged with your existing data?",
+  "import.merge": "Merge",
+  "import.replace": "Replace",
+  "import.mergeConfirmMessage": "Add the file contents to your existing data?",
+  "import.replaceConfirmMessage":
+    "Overwrite ALL your data with the file contents? This cannot be undone.",
+  "import.successTitle": "Import complete",
+  "import.successMessage":
+    "{categories} categories, {transactions} transactions, {budgets} budgets",
+  "import.errorTitle": "Import failed",
+  "import.errorMessage": "Invalid or unreadable file.",
 
   // Legal — shared
   "legal.lastUpdated": "Last updated: {date}",
@@ -602,7 +656,7 @@ const en: Record<TranslationKey, string> = {
     "This application is a personal budgeting aid tool provided for informational purposes. It allows the user to enter, organize and view their expenses, income, categories and budgets. Use of this application cannot replace professional financial, tax or legal advice.",
   "legal.terms.a2.title": "Article 2 - Operation and Data Storage",
   "legal.terms.a2.body1":
-    "This application works in \"Offline-First\" mode. All data (transactions, categories, budgets) is stored exclusively on the user's device via a local SQLite database. No data is transmitted, hosted or synchronized on our servers.",
+    'This application works in "Offline-First" mode. All data (transactions, categories, budgets) is stored exclusively on the user\'s device via a local SQLite database. No data is transmitted, hosted or synchronized on our servers.',
   "legal.terms.a2.body2":
     "Backup, restore, security and data management are the sole responsibility of the user. Uninstalling the application results in the permanent deletion of the local data associated with it.",
   "legal.terms.a3.title": "Article 3 - No Financial Advice",

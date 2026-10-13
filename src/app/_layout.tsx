@@ -3,8 +3,8 @@ import "../global.css";
 import { Providers } from "@/components/providers";
 import { AnimatedSplash } from "@/components/splash/AnimatedSplash";
 import { ThemedView } from "@/components/ui/themed-view";
-import { runMigrations } from "@/database/connection";
 import { loadThemePreference } from "@/hooks/theme-preference";
+import { runMigrations } from "@/services/database";
 import { NotificationService } from "@/services/notifications/NotificationService";
 import { notificationPreferences } from "@/storage/notificationPreferences";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -27,7 +27,7 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
-        runMigrations();
+        await runMigrations();
         await loadThemePreference();
         await NotificationService.configure();
         const prefs = await notificationPreferences.getPreferences();
@@ -62,7 +62,10 @@ export default function RootLayout() {
                     contentStyle: { backgroundColor: "transparent" },
                   }}
                 >
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{ headerShown: false }}
+                  />
                   <Stack.Screen
                     name="transaction/[id]"
                     options={{

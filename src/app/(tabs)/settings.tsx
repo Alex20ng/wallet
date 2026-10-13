@@ -1,32 +1,51 @@
+import Select from "@/components/forms/select";
 import { Screen } from "@/components/layout";
 import { Switch, ThemedText, ThemedView } from "@/components/ui";
-import Select from "@/components/forms/select";
 import { CURRENCIES } from "@/constants/currencies";
 import { borderRadius, shadows, spacing } from "@/constants/theme";
-import { useTranslation } from "@/i18n";
-import { LANGUAGES } from "@/i18n/translations";
-import { haptics } from "@/hooks/use-haptics";
 import { setThemePreference } from "@/hooks/theme-preference";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { haptics } from "@/hooks/use-haptics";
 import { useTheme } from "@/hooks/use-theme";
-import { useSettingsStore } from "@/store/useSettingsStore";
+import { useTranslation } from "@/i18n";
+import { LANGUAGES } from "@/i18n/translations";
+import {
+  applyBackup,
+  hasTransactions,
+  importTransactionsCSV,
+  parseBackupJSON,
+  serializeBackup,
+  serializeTransactionsCSV,
+  timestampForFilename,
+  type ImportResult,
+} from "@/services/backup";
+import { pickTextFile, saveTextFile } from "@/services/file-transfer";
 import { NotificationService } from "@/services/notifications/NotificationService";
 import { notificationPreferences } from "@/storage/notificationPreferences";
+import { useAppStore } from "@/store/useAppStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
+import { alert } from "@/utils/alert";
+import { chooseImportMode } from "@/utils/import-mode";
+import { pickTime } from "@/utils/pick-time";
 import { router, useFocusEffect } from "expo-router";
 import type { LucideIcon } from "lucide-react-native";
 import {
   Bell,
   CalendarDays,
+  Database,
+  FileJson,
   FileSignature,
+  FileSpreadsheet,
   Info,
   Languages,
   Moon,
   Palette,
   Shield,
+  Upload,
   Wallet,
 } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 type SettingItem = {
   key: string;
@@ -50,8 +69,6 @@ type SettingSection = {
   icon: LucideIcon;
   items: SettingItem[];
 };
-
-const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export default function SettingsScreen() {
   const colors = useTheme();
@@ -104,11 +121,14 @@ export default function SettingsScreen() {
   const formatTime = (hour: number, minute: number) =>
     `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 
-  const pickReminderTime = async () => {
-    await haptics.impact(haptics.ImpactFeedbackStyle.Light);
-    const buttons = HOURS.map((hour) => ({
-      text: formatTime(hour, 0),
-      onPress: async () => {
+  const pickReminderTime = () => {
+    void haptics.impact(haptics.ImpactFeedbackStyle.Light);
+    pickTime({
+      title: t("settings.reminderTimeTitle"),
+      message: t("settings.reminderTimeMessage"),
+      cancelLabel: t("common.cancel"),
+      currentHour: dailyReminderHour,
+      onPick: async (hour) => {
         setDailyReminderHour(hour);
         setDailyReminderMinute(0);
         await notificationPreferences.setDailyReminderTime(hour, 0);
@@ -116,12 +136,85 @@ export default function SettingsScreen() {
           await NotificationService.scheduleDailyReminder(hour, 0);
         }
       },
-    }));
-    Alert.alert(
-      t("settings.reminderTimeTitle"),
-      t("settings.reminderTimeMessage"),
-      [{ text: t("common.cancel"), style: "cancel" }, ...buttons],
-    );
+    });
+  };
+
+  const handleExportJSON = async () => {
+    try {
+      await saveTextFile(
+        serializeBackup(),
+        `wallet-backup-${timestampForFilename()}.json`,
+        "application/json",
+      );
+      alert(t("export.successTitle"), t("export.successMessage"));
+    } catch {
+      alert(t("export.errorTitle"), t("export.errorMessage"));
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!hasTransactions()) {
+      alert(t("export.emptyTransactions"));
+      return;
+    }
+    try {
+      await saveTextFile(
+        serializeTransactionsCSV(),
+        `wallet-transactions-${timestampForFilename()}.csv`,
+        "text/csv",
+      );
+      alert(t("export.successTitle"), t("export.successMessage"));
+    } catch {
+      alert(t("export.errorTitle"), t("export.errorMessage"));
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const picked = await pickTextFile([
+        "application/json",
+        "text/csv",
+        "text/comma-separated-values",
+        "text/plain",
+        ".json",
+        ".csv",
+      ]);
+      if (!picked) return;
+
+      const isJSON =
+        picked.name.toLowerCase().endsWith(".json") ||
+        picked.content.trimStart().startsWith("{");
+
+      let result: ImportResult;
+      if (isJSON) {
+        const payload = parseBackupJSON(picked.content);
+        const mode = await chooseImportMode({
+          title: t("import.title"),
+          message: t("import.modeMessage"),
+          cancelLabel: t("common.cancel"),
+          mergeLabel: t("import.merge"),
+          replaceLabel: t("import.replace"),
+          mergeConfirmMessage: t("import.mergeConfirmMessage"),
+          replaceConfirmMessage: t("import.replaceConfirmMessage"),
+        });
+        if (!mode) return;
+        result = applyBackup(payload, mode);
+      } else {
+        result = importTransactionsCSV(picked.content);
+      }
+
+      await useAppStore.getState().refreshData();
+      alert(
+        t("import.successTitle"),
+        t("import.successMessage", {
+          categories: result.categories,
+          transactions: result.transactions,
+          budgets: result.budgets,
+        }),
+      );
+    } catch {
+      alert(t("import.errorTitle"), t("import.errorMessage"));
+    }
   };
 
   const settingsSections: SettingSection[] = [
@@ -254,6 +347,36 @@ export default function SettingsScreen() {
           }),
           type: "value",
           value: `${warningThreshold}%`,
+        },
+      ],
+    },
+    {
+      title: t("settings.data"),
+      icon: Database,
+      items: [
+        {
+          key: "export-json",
+          icon: FileJson,
+          label: t("settings.exportJson"),
+          description: t("settings.exportJsonDesc"),
+          type: "action",
+          onPress: handleExportJSON,
+        },
+        {
+          key: "export-csv",
+          icon: FileSpreadsheet,
+          label: t("settings.exportCsv"),
+          description: t("settings.exportCsvDesc"),
+          type: "action",
+          onPress: handleExportCSV,
+        },
+        {
+          key: "import-data",
+          icon: Upload,
+          label: t("settings.importData"),
+          description: t("settings.importDataDesc"),
+          type: "action",
+          onPress: handleImport,
         },
       ],
     },

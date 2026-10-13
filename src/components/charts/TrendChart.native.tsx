@@ -5,23 +5,7 @@ import { useTheme } from "../../hooks/use-theme";
 import { useTranslation } from "../../i18n";
 import { useFormatCurrency } from "../../services/currency";
 import { ThemedText } from "../ui";
-
-interface TrendDataPoint {
-  label: string;
-  income: number; // centimes
-  expense: number; // centimes
-  date: string;
-}
-
-interface TrendChartProps {
-  data: TrendDataPoint[];
-  /** Hauteur totale du composant, étiquettes de l'axe X comprises */
-  height?: number;
-  showIncome?: boolean;
-  showExpense?: boolean;
-  showLegend?: boolean;
-  animate?: boolean;
-}
+import type { TrendChartProps } from "./TrendChart.types";
 
 const Y_LABEL_WIDTH = 42;
 const X_LABELS_HEIGHT = 30;
@@ -99,7 +83,15 @@ export const TrendChart = memo(function TrendChart({
       color: string;
       points: Point[];
     }[];
-  }, [data, labelStep, showIncome, showExpense, colors.success, colors.error, t]);
+  }, [
+    data,
+    labelStep,
+    showIncome,
+    showExpense,
+    colors.success,
+    colors.error,
+    t,
+  ]);
 
   if (data.length === 0 || series.length === 0) {
     return (

@@ -126,8 +126,6 @@ function Modal({
       >
         <Animated.View
           style={[styles.overlay, animatedOverlayStyle]}
-          onStartShouldSetResponder={() => closeOnOverlayPress}
-          onResponderRelease={closeOnOverlayPress ? onClose : undefined}
           accessibilityLiveRegion="polite"
         >
           <Animated.View style={[styles.container, animatedContainerStyle]}>

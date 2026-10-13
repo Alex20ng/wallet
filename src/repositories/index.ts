@@ -1,5 +1,16 @@
-import { getDatabase } from '../database/connection';
-import type { Category, Transaction, Budget, FilterOptions, TransactionWithCategory, CategoryWithBudget, DashboardStats, CategorySpending, DailyAmount, MonthlyComparison } from '../types';
+import { getDatabase } from "../services/database";
+import type {
+  Budget,
+  Category,
+  CategorySpending,
+  CategoryWithBudget,
+  DailyAmount,
+  DashboardStats,
+  FilterOptions,
+  MonthlyComparison,
+  Transaction,
+  TransactionWithCategory,
+} from "../types";
 
 type Row = Record<string, unknown>;
 
@@ -15,13 +26,13 @@ function getCurrentTimestamp(): number {
   return Date.now();
 }
 
-function mapRowToCategory(row: Record<string, unknown>): Category {
+export function mapRowToCategory(row: Record<string, unknown>): Category {
   return {
     id: row.id as string,
     name: row.name as string,
     icon: row.icon as string,
     color: row.color as string,
-    type: row.type as Category['type'],
+    type: row.type as Category["type"],
     isDefault: Boolean(row.is_default),
     sortOrder: row.sort_order as number,
     createdAt: row.created_at as number,
@@ -29,11 +40,11 @@ function mapRowToCategory(row: Record<string, unknown>): Category {
   };
 }
 
-function mapRowToTransaction(row: Record<string, unknown>): Transaction {
+export function mapRowToTransaction(row: Record<string, unknown>): Transaction {
   return {
     id: row.id as string,
     amount: row.amount as number,
-    type: row.type as Transaction['type'],
+    type: row.type as Transaction["type"],
     categoryId: row.category_id as string,
     date: row.date as number,
     note: row.note as string | null,
@@ -42,7 +53,7 @@ function mapRowToTransaction(row: Record<string, unknown>): Transaction {
   };
 }
 
-function mapRowToBudget(row: Record<string, unknown>): Budget {
+export function mapRowToBudget(row: Record<string, unknown>): Budget {
   return {
     id: row.id as string,
     categoryId: row.category_id as string,
@@ -58,81 +69,120 @@ function mapRowToBudget(row: Record<string, unknown>): Budget {
 export const categoryRepository = {
   getAll(): Category[] {
     const db = getDatabase();
-    const rows = asRows(db.getAllSync('SELECT * FROM categories ORDER BY sort_order ASC'));
+    const rows = asRows(
+      db.getAllSync("SELECT * FROM categories ORDER BY sort_order ASC"),
+    );
     return rows.map(mapRowToCategory);
   },
 
-  getByType(type: Category['type']): Category[] {
+  getByType(type: Category["type"]): Category[] {
     const db = getDatabase();
-    const rows = asRows(db.getAllSync(
-      'SELECT * FROM categories WHERE type = ? OR type = ? ORDER BY sort_order ASC',
-      [type, 'both']
-    ));
+    const rows = asRows(
+      db.getAllSync(
+        "SELECT * FROM categories WHERE type = ? OR type = ? ORDER BY sort_order ASC",
+        [type, "both"],
+      ),
+    );
     return rows.map(mapRowToCategory);
   },
 
   getById(id: string): Category | null {
     const db = getDatabase();
-    const row = db.getFirstSync('SELECT * FROM categories WHERE id = ?', [id]) as Record<string, unknown> | null;
+    const row = db.getFirstSync("SELECT * FROM categories WHERE id = ?", [
+      id,
+    ]) as Record<string, unknown> | null;
     return row ? mapRowToCategory(row) : null;
   },
 
-  create(category: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Category {
+  create(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Category {
     const db = getDatabase();
     const now = getCurrentTimestamp();
-    const id = generateId('cat');
+    const id = generateId("cat");
     db.runSync(
       `INSERT INTO categories (id, name, icon, color, type, is_default, sort_order, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, category.name, category.icon, category.color, category.type, category.isDefault ? 1 : 0, category.sortOrder, now, now]
+      [
+        id,
+        category.name,
+        category.icon,
+        category.color,
+        category.type,
+        category.isDefault ? 1 : 0,
+        category.sortOrder,
+        now,
+        now,
+      ],
     );
     return { ...category, id, createdAt: now, updatedAt: now };
   },
 
-  update(id: string, updates: Partial<Omit<Category, 'id' | 'createdAt'>>): Category | null {
+  update(
+    id: string,
+    updates: Partial<Omit<Category, "id" | "createdAt">>,
+  ): Category | null {
     const db = getDatabase();
     const existing = this.getById(id);
     if (!existing) return null;
 
-    const updated = { ...existing, ...updates, updatedAt: getCurrentTimestamp() };
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: getCurrentTimestamp(),
+    };
     db.runSync(
       `UPDATE categories SET name = ?, icon = ?, color = ?, type = ?, is_default = ?, sort_order = ?, updated_at = ? WHERE id = ?`,
-      [updated.name, updated.icon, updated.color, updated.type, updated.isDefault ? 1 : 0, updated.sortOrder, updated.updatedAt, id]
+      [
+        updated.name,
+        updated.icon,
+        updated.color,
+        updated.type,
+        updated.isDefault ? 1 : 0,
+        updated.sortOrder,
+        updated.updatedAt,
+        id,
+      ],
     );
     return updated;
   },
 
   delete(id: string): boolean {
     const db = getDatabase();
-    const result = db.runSync('DELETE FROM categories WHERE id = ? AND is_default = 0', [id]);
+    const result = db.runSync(
+      "DELETE FROM categories WHERE id = ? AND is_default = 0",
+      [id],
+    );
     return result.changes > 0;
   },
 
   getWithBudget(periodStart: number, periodEnd: number): CategoryWithBudget[] {
     const db = getDatabase();
-    const rows = asRows(db.getAllSync(
-      `SELECT c.*, b.amount as budget_amount, b.id as budget_id, b.alert_threshold
+    const rows = asRows(
+      db.getAllSync(
+        `SELECT c.*, b.amount as budget_amount, b.id as budget_id, b.alert_threshold
        FROM categories c
        LEFT JOIN budgets b ON c.id = b.category_id AND b.period_start = ? AND b.period_end = ?
        WHERE c.type IN ('expense', 'both')
        ORDER BY c.sort_order ASC`,
-      [periodStart, periodEnd]
-    ));
+        [periodStart, periodEnd],
+      ),
+    );
 
     return rows.map((row) => {
       const category = mapRowToCategory(row);
       return {
         ...category,
-        budget: row.budget_id ? {
-          id: row.budget_id as string,
-          categoryId: category.id,
-          amount: row.budget_amount as number,
-          periodStart,
-          periodEnd,
-          alertThreshold: row.alert_threshold as number,
-          createdAt: 0,
-          updatedAt: 0,
-        } : undefined,
+        budget: row.budget_id
+          ? {
+              id: row.budget_id as string,
+              categoryId: category.id,
+              amount: row.budget_amount as number,
+              periodStart,
+              periodEnd,
+              alertThreshold: row.alert_threshold as number,
+              createdAt: 0,
+              updatedAt: 0,
+            }
+          : undefined,
       };
     });
   },
@@ -150,23 +200,23 @@ export const transactionRepository = {
     const params: (string | number)[] = [];
 
     if (options?.startDate) {
-      query += ' AND t.date >= ?';
+      query += " AND t.date >= ?";
       params.push(options.startDate);
     }
     if (options?.endDate) {
-      query += ' AND t.date <= ?';
+      query += " AND t.date <= ?";
       params.push(options.endDate);
     }
     if (options?.type) {
-      query += ' AND t.type = ?';
+      query += " AND t.type = ?";
       params.push(options.type);
     }
     if (options?.categoryIds?.length) {
-      query += ` AND t.category_id IN (${options.categoryIds.map(() => '?').join(',')})`;
+      query += ` AND t.category_id IN (${options.categoryIds.map(() => "?").join(",")})`;
       params.push(...options.categoryIds);
     }
 
-    query += ' ORDER BY t.date DESC, t.created_at DESC';
+    query += " ORDER BY t.date DESC, t.created_at DESC";
 
     const rows = asRows(db.getAllSync(query, params));
     return rows.map((row) => ({
@@ -176,7 +226,7 @@ export const transactionRepository = {
         name: row.category_name as string,
         icon: row.category_icon as string,
         color: row.category_color as string,
-        type: row.category_type as Category['type'],
+        type: row.category_type as Category["type"],
         isDefault: false,
         sortOrder: 0,
         createdAt: 0,
@@ -192,7 +242,7 @@ export const transactionRepository = {
        FROM transactions t
        JOIN categories c ON t.category_id = c.id
        WHERE t.id = ?`,
-      [id]
+      [id],
     ) as Record<string, unknown> | null;
 
     if (!row) return null;
@@ -204,7 +254,7 @@ export const transactionRepository = {
         name: row.category_name as string,
         icon: row.category_icon as string,
         color: row.category_color as string,
-        type: row.category_type as Category['type'],
+        type: row.category_type as Category["type"],
         isDefault: false,
         sortOrder: 0,
         createdAt: 0,
@@ -213,46 +263,77 @@ export const transactionRepository = {
     };
   },
 
-  create(transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>): Transaction {
+  create(
+    transaction: Omit<Transaction, "id" | "createdAt" | "updatedAt">,
+  ): Transaction {
     const db = getDatabase();
     const now = getCurrentTimestamp();
-    const id = generateId('txn');
+    const id = generateId("txn");
     db.runSync(
       `INSERT INTO transactions (id, amount, type, category_id, date, note, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, transaction.amount, transaction.type, transaction.categoryId, transaction.date, transaction.note, now, now]
+      [
+        id,
+        transaction.amount,
+        transaction.type,
+        transaction.categoryId,
+        transaction.date,
+        transaction.note,
+        now,
+        now,
+      ],
     );
     return { ...transaction, id, createdAt: now, updatedAt: now };
   },
 
-  update(id: string, updates: Partial<Omit<Transaction, 'id' | 'createdAt'>>): Transaction | null {
+  update(
+    id: string,
+    updates: Partial<Omit<Transaction, "id" | "createdAt">>,
+  ): Transaction | null {
     const db = getDatabase();
     const existing = this.getById(id);
     if (!existing) return null;
 
-    const updated = { ...existing, ...updates, updatedAt: getCurrentTimestamp() };
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: getCurrentTimestamp(),
+    };
     db.runSync(
       `UPDATE transactions SET amount = ?, type = ?, category_id = ?, date = ?, note = ?, updated_at = ? WHERE id = ?`,
-      [updated.amount, updated.type, updated.categoryId, updated.date, updated.note, updated.updatedAt, id]
+      [
+        updated.amount,
+        updated.type,
+        updated.categoryId,
+        updated.date,
+        updated.note,
+        updated.updatedAt,
+        id,
+      ],
     );
     return updated;
   },
 
   delete(id: string): boolean {
     const db = getDatabase();
-    const result = db.runSync('DELETE FROM transactions WHERE id = ?', [id]);
+    const result = db.runSync("DELETE FROM transactions WHERE id = ?", [id]);
     return result.changes > 0;
   },
 
-  getExpenseTotalsByCategory(startDate: number, endDate: number): { categoryId: string; amount: number }[] {
+  getExpenseTotalsByCategory(
+    startDate: number,
+    endDate: number,
+  ): { categoryId: string; amount: number }[] {
     const db = getDatabase();
-    const rows = asRows(db.getAllSync(
-      `SELECT category_id, SUM(amount) as amount
+    const rows = asRows(
+      db.getAllSync(
+        `SELECT category_id, SUM(amount) as amount
        FROM transactions
        WHERE type = 'expense' AND date >= ? AND date <= ?
        GROUP BY category_id`,
-      [startDate, endDate]
-    ));
+        [startDate, endDate],
+      ),
+    );
     return rows.map((row) => ({
       categoryId: row.category_id as string,
       amount: row.amount as number,
@@ -269,22 +350,24 @@ export const transactionRepository = {
          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense
        FROM transactions
        WHERE date >= ? AND date <= ?`,
-      [startDate, endDate]
+      [startDate, endDate],
     ) as Record<string, unknown> | null;
 
-    const totalIncome = totals?.total_income as number || 0;
-    const totalExpense = totals?.total_expense as number || 0;
+    const totalIncome = (totals?.total_income as number) || 0;
+    const totalExpense = (totals?.total_expense as number) || 0;
 
     // Expense by category
-    const expenseRows = asRows(db.getAllSync(
-      `SELECT c.id, c.name, c.icon, c.color, SUM(t.amount) as amount, COUNT(*) as count
+    const expenseRows = asRows(
+      db.getAllSync(
+        `SELECT c.id, c.name, c.icon, c.color, SUM(t.amount) as amount, COUNT(*) as count
        FROM transactions t
        JOIN categories c ON t.category_id = c.id
        WHERE t.type = 'expense' AND t.date >= ? AND t.date <= ?
        GROUP BY c.id, c.name, c.icon, c.color
        ORDER BY amount DESC`,
-      [startDate, endDate]
-    ));
+        [startDate, endDate],
+      ),
+    );
 
     const expenseByCategory: CategorySpending[] = expenseRows.map((row) => ({
       categoryId: row.id as string,
@@ -292,20 +375,23 @@ export const transactionRepository = {
       categoryIcon: row.icon as string,
       categoryColor: row.color as string,
       amount: row.amount as number,
-      percentage: totalExpense > 0 ? (row.amount as number) / totalExpense * 100 : 0,
+      percentage:
+        totalExpense > 0 ? ((row.amount as number) / totalExpense) * 100 : 0,
       transactionCount: row.count as number,
     }));
 
     // Income by category
-    const incomeRows = asRows(db.getAllSync(
-      `SELECT c.id, c.name, c.icon, c.color, SUM(t.amount) as amount, COUNT(*) as count
+    const incomeRows = asRows(
+      db.getAllSync(
+        `SELECT c.id, c.name, c.icon, c.color, SUM(t.amount) as amount, COUNT(*) as count
        FROM transactions t
        JOIN categories c ON t.category_id = c.id
        WHERE t.type = 'income' AND t.date >= ? AND t.date <= ?
        GROUP BY c.id, c.name, c.icon, c.color
        ORDER BY amount DESC`,
-      [startDate, endDate]
-    ));
+        [startDate, endDate],
+      ),
+    );
 
     const incomeByCategory: CategorySpending[] = incomeRows.map((row) => ({
       categoryId: row.id as string,
@@ -313,13 +399,15 @@ export const transactionRepository = {
       categoryIcon: row.icon as string,
       categoryColor: row.color as string,
       amount: row.amount as number,
-      percentage: totalIncome > 0 ? (row.amount as number) / totalIncome * 100 : 0,
+      percentage:
+        totalIncome > 0 ? ((row.amount as number) / totalIncome) * 100 : 0,
       transactionCount: row.count as number,
     }));
 
     // Daily trend (last 30 days)
-    const dailyRows = asRows(db.getAllSync(
-      `SELECT 
+    const dailyRows = asRows(
+      db.getAllSync(
+        `SELECT 
          date(date/1000, 'unixepoch') as day,
          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
@@ -327,8 +415,9 @@ export const transactionRepository = {
        WHERE date >= ? AND date <= ?
        GROUP BY day
        ORDER BY day ASC`,
-      [startDate, endDate]
-    ));
+        [startDate, endDate],
+      ),
+    );
 
     const dailyTrend: DailyAmount[] = dailyRows.map((row) => ({
       date: row.day as string,
@@ -337,16 +426,18 @@ export const transactionRepository = {
     }));
 
     // Monthly comparison (last 6 months)
-    const monthlyRows = asRows(db.getAllSync(
-      `SELECT 
+    const monthlyRows = asRows(
+      db.getAllSync(
+        `SELECT 
          strftime('%Y-%m', date/1000, 'unixepoch') as month,
          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
        FROM transactions
        WHERE date >= date('now', '-6 months', 'start of month') * 1000
        GROUP BY month
-       ORDER BY month ASC`
-    ));
+       ORDER BY month ASC`,
+      ),
+    );
 
     const monthlyComparison: MonthlyComparison[] = monthlyRows.map((row) => ({
       month: row.month as string,
@@ -366,14 +457,18 @@ export const transactionRepository = {
     };
   },
 
-  getMonthlyTotal(type: Transaction['type'], year: number, month: number): number {
+  getMonthlyTotal(
+    type: Transaction["type"],
+    year: number,
+    month: number,
+  ): number {
     const db = getDatabase();
     const start = new Date(year, month - 1, 1).getTime();
     const end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
 
     const row = db.getFirstSync(
       `SELECT SUM(amount) as total FROM transactions WHERE type = ? AND date >= ? AND date <= ?`,
-      [type, start, end]
+      [type, start, end],
     ) as Record<string, unknown> | null;
 
     return (row?.total as number) || 0;
@@ -383,35 +478,46 @@ export const transactionRepository = {
 export const budgetRepository = {
   getAll(periodStart: number, periodEnd: number): Budget[] {
     const db = getDatabase();
-    const rows = asRows(db.getAllSync(
-      'SELECT * FROM budgets WHERE period_start = ? AND period_end = ?',
-      [periodStart, periodEnd]
-    ));
+    const rows = asRows(
+      db.getAllSync(
+        "SELECT * FROM budgets WHERE period_start = ? AND period_end = ?",
+        [periodStart, periodEnd],
+      ),
+    );
     return rows.map(mapRowToBudget);
   },
 
   getByCategory(categoryId: string, periodStart: number): Budget | null {
     const db = getDatabase();
     const row = db.getFirstSync(
-      'SELECT * FROM budgets WHERE category_id = ? AND period_start = ?',
-      [categoryId, periodStart]
+      "SELECT * FROM budgets WHERE category_id = ? AND period_start = ?",
+      [categoryId, periodStart],
     ) as Record<string, unknown> | null;
     return row ? mapRowToBudget(row) : null;
   },
 
-  create(budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>): Budget {
+  create(budget: Omit<Budget, "id" | "createdAt" | "updatedAt">): Budget {
     const db = getDatabase();
     const now = getCurrentTimestamp();
-    const id = generateId('budget');
+    const id = generateId("budget");
     db.runSync(
       `INSERT INTO budgets (id, category_id, amount, period_start, period_end, alert_threshold, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, budget.categoryId, budget.amount, budget.periodStart, budget.periodEnd, budget.alertThreshold, now, now]
+      [
+        id,
+        budget.categoryId,
+        budget.amount,
+        budget.periodStart,
+        budget.periodEnd,
+        budget.alertThreshold,
+        now,
+        now,
+      ],
     );
     return { ...budget, id, createdAt: now, updatedAt: now };
   },
 
-  upsert(budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>): Budget {
+  upsert(budget: Omit<Budget, "id" | "createdAt" | "updatedAt">): Budget {
     const existing = this.getByCategory(budget.categoryId, budget.periodStart);
     if (existing) {
       const updated = this.update(existing.id, {
@@ -424,7 +530,10 @@ export const budgetRepository = {
     return this.create(budget);
   },
 
-  update(id: string, updates: Partial<Omit<Budget, 'id' | 'createdAt'>>): Budget | null {
+  update(
+    id: string,
+    updates: Partial<Omit<Budget, "id" | "createdAt">>,
+  ): Budget | null {
     const db = getDatabase();
     const existing = this.getById(id);
     if (!existing) return null;
@@ -435,7 +544,7 @@ export const budgetRepository = {
     const periodEnd = updates.periodEnd ?? existing.periodEnd;
     db.runSync(
       `UPDATE budgets SET amount = ?, alert_threshold = ?, period_end = ?, updated_at = ? WHERE id = ?`,
-      [amount, alertThreshold, periodEnd, updatedAt, id]
+      [amount, alertThreshold, periodEnd, updatedAt, id],
     );
 
     return {
@@ -449,13 +558,15 @@ export const budgetRepository = {
 
   getById(id: string): Budget | null {
     const db = getDatabase();
-    const row = db.getFirstSync('SELECT * FROM budgets WHERE id = ?', [id]) as Record<string, unknown> | null;
+    const row = db.getFirstSync("SELECT * FROM budgets WHERE id = ?", [
+      id,
+    ]) as Record<string, unknown> | null;
     return row ? mapRowToBudget(row) : null;
   },
 
   delete(id: string): boolean {
     const db = getDatabase();
-    const result = db.runSync('DELETE FROM budgets WHERE id = ?', [id]);
+    const result = db.runSync("DELETE FROM budgets WHERE id = ?", [id]);
     return result.changes > 0;
   },
 };

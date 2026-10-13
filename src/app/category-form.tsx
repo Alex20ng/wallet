@@ -11,8 +11,8 @@ import { useAppStore } from "@/store/useAppStore";
 import { router, useLocalSearchParams } from "expo-router";
 import { Check } from "lucide-react-native";
 import { useState } from "react";
+import { alert } from "@/utils/alert";
 import {
-  Alert,
   KeyboardAvoidingView,
   LayoutChangeEvent,
   Platform,
@@ -77,7 +77,7 @@ export default function CategoryFormSheet() {
 
   const handleDelete = () => {
     if (!editing) return;
-    Alert.alert(
+    alert(
       t("categories.deleteTitle"),
       t("categories.deleteMessage", { name: editing.name }),
       [

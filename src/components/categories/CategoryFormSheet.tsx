@@ -15,7 +15,7 @@ import {
   BottomSheetFooter,
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetTextInput,
+  BottomSheetTextInput as NativeBottomSheetTextInput,
   useBottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { Check } from "lucide-react-native";
@@ -28,13 +28,18 @@ import {
   useState,
 } from "react";
 import {
-  Alert,
   LayoutChangeEvent,
+  Platform,
   Pressable,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
+import { alert } from "@/utils/alert";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const BottomSheetTextInput =
+  Platform.OS === "web" ? TextInput : NativeBottomSheetTextInput;
 
 export interface CategoryFormSheetRef {
   present: (category?: Category) => void;
@@ -155,7 +160,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
 
     const handleDelete = useCallback(() => {
       if (!editingCategory) return;
-      Alert.alert(
+      alert(
         t("categories.deleteTitle"),
         t("categories.deleteMessage", { name: editingCategory.name }),
         [
@@ -211,7 +216,7 @@ export const CategoryFormSheet = forwardRef<CategoryFormSheetRef>(
             }}
           >
             <View style={{ flex: 1 }}>
-              {editingCategory ? (
+              {editingCategory && !editingCategory.isDefault ? (
                 <Button
                   title={t("common.delete")}
                   onPress={handleDelete}

@@ -12,6 +12,7 @@ export default function FloatingActionButton() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const isWeb = (Platform.OS = "web");
 
   return (
     <Pressable
@@ -23,7 +24,7 @@ export default function FloatingActionButton() {
         {
           position: "absolute",
           right: 20,
-          bottom: insets.bottom - 20, // au-dessus de la tab bar
+          bottom: isWeb ? insets.bottom + 10 : insets.bottom - 20, // au-dessus de la tab bar
           width: SIZE,
           height: SIZE,
           zIndex: 100,

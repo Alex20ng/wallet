@@ -21,12 +21,12 @@ import { useFocusEffect } from "expo-router";
 import { Plus } from "lucide-react-native";
 import React, { useCallback, useMemo } from "react";
 import {
-  Alert,
   Pressable,
   RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
+import { alert } from "@/utils/alert";
 
 export default function BudgetsScreen() {
   const {
@@ -117,7 +117,7 @@ export default function BudgetsScreen() {
   };
 
   const handleDelete = (budget: Budget) => {
-    Alert.alert(t("budgets.deleteTitle"), t("budgets.deleteMessage"), [
+    alert(t("budgets.deleteTitle"), t("budgets.deleteMessage"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("common.delete"),

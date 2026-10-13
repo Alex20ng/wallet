@@ -161,6 +161,8 @@ export default function DashboardScreen() {
         },
         quickActions: {
           flexDirection: "row",
+          justifyContent: "flex-start",
+          alignItems: "center",
           gap: spacing.sm,
           marginBottom: spacing.md,
         },
@@ -573,15 +575,12 @@ function QuickAction({
       }}
       style={({ pressed }) => [
         {
-          flex: 1,
-          backgroundColor: colors.surface,
-          borderRadius: borderRadius.lg,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border,
-          paddingVertical: spacing.md,
+          backgroundColor: "transparent",
+          borderWidth: 0,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.xs,
           alignItems: "center",
           gap: spacing.xs + 2,
-          ...shadows.xs,
         },
         pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] },
       ]}
@@ -592,7 +591,7 @@ function QuickAction({
         style={{
           width: 42,
           height: 42,
-          borderRadius: 21,
+          borderRadius: borderRadius.lg,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: iconBackground,
@@ -600,6 +599,7 @@ function QuickAction({
       >
         {icon}
       </View>
+
       <ThemedText variant="caption" weight="semibold" color="secondary">
         {label}
       </ThemedText>
