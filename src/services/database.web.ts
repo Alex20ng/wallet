@@ -155,6 +155,7 @@ class WebWalletDB implements WalletDatabase {
   private readyPromise: Promise<void> | null = null;
   private tables: SqlTables = { categories: [], transactions: [], budgets: [] };
   private writeQueue: Promise<void> = Promise.resolve();
+  private writeError: Error | null = null;
 
   /** Initialise la base (IndexedDB) puis charge tout en mémoire. Idempotente. */
   ready(): Promise<void> {
@@ -221,6 +222,12 @@ class WebWalletDB implements WalletDatabase {
     const table = dex[tableName] as Table<SqlRow, string>;
     if (!table) return;
     const snapshot = [...(this.tables[tableName] ?? [])];
+    // Remplacement complet de la table : bulkPut seul n'insère/met à jour que
+    // les lignes présentes et ne SUPPRIME jamais les lignes absentes du
+    // snapshot, ce qui faisait réapparaître les éléments supprimés après un
+    // rechargement (IndexedDB conservait les anciennes lignes).
+    // Un échec d'écriture est mémorisé pour que `flushWrites` le relève : une
+    // mutation ne doit jamais « sembler » persistée alors qu'elle serait perdue.
     this.writeQueue = this.writeQueue
       .then(() =>
         dex.transaction("rw", table, async () => {
@@ -228,8 +235,13 @@ class WebWalletDB implements WalletDatabase {
           await table.bulkPut(snapshot as never[]);
         }),
       )
-      .then(() => undefined)
-      .catch((err) => console.error("[WebWalletDB]", err));
+      .then(() => {
+        this.writeError = null;
+      })
+      .catch((err) => {
+        this.writeError = err instanceof Error ? err : new Error(String(err));
+        console.error("[WebWalletDB]", err);
+      });
   }
 
   private applyWrite(
@@ -329,11 +341,19 @@ class WebWalletDB implements WalletDatabase {
     }
     this.readyPromise = null;
     this.tables = { categories: [], transactions: [], budgets: [] };
+    this.writeError = null;
   }
 
-  /** Attend la persistance IndexedDB de toutes les écritures en cours. */
+  /** Attend la persistance IndexedDB de toutes les écritures en cours.
+   *  Relève l'échec éventuel d'une écriture (au lieu de l'avaler). */
   flushWrites(): Promise<void> {
-    return this.writeQueue;
+    return this.writeQueue.then(() => {
+      if (this.writeError) {
+        const err = this.writeError;
+        this.writeError = null;
+        throw err;
+      }
+    });
   }
 }
 
