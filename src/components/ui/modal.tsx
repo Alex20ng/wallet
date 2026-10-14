@@ -6,8 +6,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   Modal as RNModal,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -26,6 +26,11 @@ import {
 } from "../../constants/theme";
 import { useTheme } from "../../hooks/use-theme";
 import { useTranslation } from "../../i18n";
+import {
+  OverlayHostProvider,
+  useOverlayHost,
+  type OverlayHost,
+} from "./overlay-host";
 import { ThemedText } from "./themed-text";
 import { ThemedView } from "./themed-view";
 
@@ -59,6 +64,7 @@ function Modal({
 }: ModalProps) {
   const colors = useTheme();
   const { t } = useTranslation();
+  const host = useOverlayHost();
   const overlayOpacity = useSharedValue(0);
   const translateY = useSharedValue(40);
   const [rendered, setRendered] = useState(visible);
@@ -121,6 +127,82 @@ function Modal({
     transform: [{ translateY: translateY.value }],
   }));
 
+  const surface = (
+    <KeyboardAvoidingView
+      style={styles.overlay}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <Animated.View
+        style={[styles.overlay, animatedOverlayStyle]}
+        accessibilityLiveRegion="polite"
+      >
+        <Animated.View style={[styles.container, animatedContainerStyle]}>
+          <Pressable
+            onPress={closeOnOverlayPress ? onClose : undefined}
+            style={StyleSheet.absoluteFill}
+            accessibilityLabel={t("common.close")}
+          />
+          <ThemedView
+            variant="surface"
+            style={[styles.modal, { maxWidth: maxWidths[size] }]}
+          >
+            {showHandle && (
+              <View style={styles.handleContainer}>
+                <View
+                  style={[
+                    styles.handle,
+                    { backgroundColor: colors.borderStrong },
+                  ]}
+                />
+              </View>
+            )}
+            {title && (
+              <View style={styles.header}>
+                <ThemedText
+                  variant="subtitle"
+                  weight="bold"
+                  style={styles.headerTitle}
+                >
+                  {title}
+                </ThemedText>
+                <Pressable
+                  onPress={onClose}
+                  style={[
+                    styles.closeButton,
+                    { backgroundColor: colors.backgroundSecondary },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("common.close")}
+                  hitSlop={8}
+                >
+                  <X size={18} strokeWidth={2.4} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+            )}
+            <ScrollView
+              style={styles.contentScroll}
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+              overScrollMode="never"
+            >
+              {children}
+            </ScrollView>
+          </ThemedView>
+        </Animated.View>
+      </Animated.View>
+    </KeyboardAvoidingView>
+  );
+
+  if (host) {
+    return (
+      <HostedModal host={host} active={rendered}>
+        {surface}
+      </HostedModal>
+    );
+  }
+
   if (!rendered) {
     return null;
   }
@@ -134,77 +216,31 @@ function Modal({
       statusBarTranslucent
       testID={testID}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <Animated.View
-          style={[styles.overlay, animatedOverlayStyle]}
-          accessibilityLiveRegion="polite"
-        >
-          <Animated.View style={[styles.container, animatedContainerStyle]}>
-            <Pressable
-              onPress={closeOnOverlayPress ? onClose : undefined}
-              style={StyleSheet.absoluteFill}
-              accessibilityLabel={t("common.close")}
-            />
-            <ThemedView
-              variant="surface"
-              style={[styles.modal, { maxWidth: maxWidths[size] }]}
-            >
-              {showHandle && (
-                <View style={styles.handleContainer}>
-                  <View
-                    style={[
-                      styles.handle,
-                      { backgroundColor: colors.borderStrong },
-                    ]}
-                  />
-                </View>
-              )}
-              {title && (
-                <View style={styles.header}>
-                  <ThemedText
-                    variant="subtitle"
-                    weight="bold"
-                    style={styles.headerTitle}
-                  >
-                    {title}
-                  </ThemedText>
-                  <Pressable
-                    onPress={onClose}
-                    style={[
-                      styles.closeButton,
-                      { backgroundColor: colors.backgroundSecondary },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("common.close")}
-                    hitSlop={8}
-                  >
-                    <X
-                      size={18}
-                      strokeWidth={2.4}
-                      color={colors.textSecondary}
-                    />
-                  </Pressable>
-                </View>
-              )}
-              <ScrollView
-                style={styles.contentScroll}
-                contentContainerStyle={styles.content}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-                overScrollMode="never"
-              >
-                {children}
-              </ScrollView>
-            </ThemedView>
-          </Animated.View>
-        </Animated.View>
-      </KeyboardAvoidingView>
+      <OverlayHostProvider>{surface}</OverlayHostProvider>
     </RNModal>
   );
+}
+
+function HostedModal({
+  host,
+  active,
+  children,
+}: {
+  host: OverlayHost;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (active) {
+      host.setContent(children);
+    } else {
+      host.clearContent();
+    }
+  }, [host, active, children]);
+
+  useEffect(() => () => host.clearContent(), [host]);
+
+  return null;
 }
 
 const styles = StyleSheet.create({

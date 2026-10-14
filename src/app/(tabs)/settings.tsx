@@ -31,6 +31,7 @@ import { router, useFocusEffect } from "expo-router";
 import type { LucideIcon } from "lucide-react-native";
 import {
   Bell,
+  BookOpen,
   CalendarDays,
   Database,
   FileJson,
@@ -395,6 +396,14 @@ export default function SettingsScreen() {
           value: t("common.version"),
         },
         {
+          key: "docs",
+          icon: BookOpen,
+          label: t("settings.docs"),
+          description: t("settings.docsDesc"),
+          type: "action",
+          onPress: () => router.push("/docs"),
+        },
+        {
           key: "terms",
           icon: FileSignature,
           label: t("settings.terms"),
@@ -426,52 +435,50 @@ export default function SettingsScreen() {
 
       <View>
         {settingsSections
-          .filter(
-            (section) => !(Platform.OS === "web" && section.hideOnWeb),
-          )
+          .filter((section) => !(Platform.OS === "web" && section.hideOnWeb))
           .map((section) => (
-          <ThemedView
-            key={section.title}
-            variant="surface"
-            style={styles.section}
-          >
-            <View style={styles.sectionHeader}>
-              <View
-                style={[
-                  styles.sectionIcon,
-                  { backgroundColor: colors.primaryLight },
-                ]}
-              >
-                <section.icon
-                  size={16}
-                  strokeWidth={2.4}
-                  color={colors.primary}
-                />
+            <ThemedView
+              key={section.title}
+              variant="surface"
+              style={styles.section}
+            >
+              <View style={styles.sectionHeader}>
+                <View
+                  style={[
+                    styles.sectionIcon,
+                    { backgroundColor: colors.primaryLight },
+                  ]}
+                >
+                  <section.icon
+                    size={16}
+                    strokeWidth={2.4}
+                    color={colors.primary}
+                  />
+                </View>
+                <ThemedText
+                  variant="caption"
+                  weight="bold"
+                  color="tertiary"
+                  style={styles.sectionTitle}
+                >
+                  {section.title.toUpperCase()}
+                </ThemedText>
               </View>
-              <ThemedText
-                variant="caption"
-                weight="bold"
-                color="tertiary"
-                style={styles.sectionTitle}
-              >
-                {section.title.toUpperCase()}
-              </ThemedText>
-            </View>
 
-            {section.items.map((item, index) => (
-              <View
-                key={item.key}
-                style={
-                  index > 0
-                    ? [styles.itemDivider, { borderTopColor: colors.border }]
-                    : undefined
-                }
-              >
-                <SettingRow item={item} />
-              </View>
-            ))}
-          </ThemedView>
-        ))}
+              {section.items.map((item, index) => (
+                <View
+                  key={item.key}
+                  style={
+                    index > 0
+                      ? [styles.itemDivider, { borderTopColor: colors.border }]
+                      : undefined
+                  }
+                >
+                  <SettingRow item={item} />
+                </View>
+              ))}
+            </ThemedView>
+          ))}
       </View>
     </Screen>
   );

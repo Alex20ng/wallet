@@ -8,6 +8,7 @@ import {
   ThemedText,
   ThemedView,
 } from "@/components/ui";
+import { OverlayHostProvider } from "@/components/ui/overlay-host";
 import { borderRadius, shadow, spacing } from "@/constants/theme";
 import { useBudgetAlerts } from "@/hooks/alerts/useBudgetAlerts";
 import { useCategoryName } from "@/hooks/use-category-name";
@@ -195,7 +196,7 @@ export default function TransactionFormScreen() {
   const isExpense = type === "expense";
 
   return (
-    <>
+    <OverlayHostProvider>
       <NoIndexHead />
       <Screen>
         <PageHeader
@@ -382,7 +383,7 @@ export default function TransactionFormScreen() {
           )}
         </View>
       </Screen>
-    </>
+    </OverlayHostProvider>
   );
 }
 

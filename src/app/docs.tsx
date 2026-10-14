@@ -3,10 +3,13 @@ import { ThemedText, ThemedView } from "@/components/ui";
 import { absoluteUrl, APP_NAME, OG_IMAGE_PATH } from "@/constants/seo";
 import { borderRadius, shadows, spacing, typography } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
+import { haptics } from "@/hooks/use-haptics";
+import { useTranslation } from "@/i18n";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { Image } from "expo-image";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import {
+  ArrowLeft,
   ArrowRight,
   BellRing,
   ChartPie,
@@ -17,8 +20,12 @@ import {
   Tags,
   TrendingUp,
 } from "lucide-react-native";
+import { useCallback } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const LOGO = require("../../assets/images/splash-icon.png");
 
@@ -214,8 +221,19 @@ export default function DocsScreen() {
 
 function DocsContent() {
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const language = useSettingsStore((state) => state.language);
   const copy = LANDING_COPY[language];
+
+  const handleBack = useCallback(async () => {
+    await haptics.impact(haptics.ImpactFeedbackStyle.Light);
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/settings");
+    }
+  }, []);
 
   const canonical = absoluteUrl("/docs");
 
@@ -249,6 +267,22 @@ function DocsContent() {
         path="/docs"
         jsonLd={jsonLd}
       />
+      <ThemedView
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, spacing.md) },
+        ]}
+      >
+        <Pressable
+          onPress={handleBack}
+          style={[styles.backButton, { backgroundColor: colors.surface }]}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.back")}
+        >
+          <ArrowLeft size={20} strokeWidth={2.4} color={colors.textPrimary} />
+        </Pressable>
+      </ThemedView>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -494,6 +528,20 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1080,
     alignSelf: "center",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   hero: {
     alignItems: "center",
